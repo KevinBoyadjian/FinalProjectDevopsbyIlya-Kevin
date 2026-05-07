@@ -47,7 +47,7 @@ jobs:
             docker build -f docker/Dockerfile -t ${{ secrets.DOCKERHUB_USERNAME }}/football-app:${{ github.sha }} .
 
         - name: Run Trivy Security Scan
-          uses: aquasecurity/trivy-action@0.20.0
+          uses: aquasecurity/trivy-action@master
           with:
             image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/football-app:${{ github.sha }}'
             format: 'table'
