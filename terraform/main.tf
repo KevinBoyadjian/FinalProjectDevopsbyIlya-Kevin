@@ -30,8 +30,6 @@ module "eks_cluster" {
     # Add specific CIDR blocks if you want to restrict public access to control plane
     # cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]
 
-    enable_cluster_creator_admin_permissions = true # For initial setup
-
     tags = var.common_tags
 }
 
