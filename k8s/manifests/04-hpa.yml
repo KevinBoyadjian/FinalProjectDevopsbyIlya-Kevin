@@ -1,0 +1,24 @@
+# k8s/manifests/04-hpa.yml
+# Purpose: Automatically scales the number of Pod replicas (horizontal scaling)
+# based on observed CPU utilization. This ensures your application can
+# handle traffic spikes and reduce resources during low load.
+
+apiVersion: autoscaling/v2 # API version for HorizontalPodAutoscaler
+kind: HorizontalPodAutoscaler # Type of Kubernetes resource: HPA
+metadata:
+  name: football-app-hpa # Unique name for this HPA
+spec:
+  scaleTargetRef:         # References the Deployment this HPA will scale
+    apiVersion: apps/v1
+    kind: Deployment
+    name: football-app-deployment # Must match the Deployment's name
+  minReplicas: 3 # Minimum number of Pods to maintain, even under low load
+  maxReplicas: 10 # Maximum number of Pods the HPA will scale up to
+  metrics:
+  - type: Resource # Type of metric to use (e.g., CPU, Memory)
+    resource:
+      name: cpu # Metric name: CPU
+      target:
+        type: Utilization # Target type: Average utilization
+        averageUtilization: 70 # Scale up if average CPU utilization across all pods exceeds 70%
+

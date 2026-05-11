@@ -1,0 +1,94 @@
+# k8s/manifests/02-deployment.yaml
+# Purpose: Defines the desired state for your Flask application's Pods and manages their lifecycle.
+# This Deployment ensures high availability, handles updates, and provides self-healing capabilities.
+
+apiVersion: apps/v1 # API version for Deployment objects
+kind: Deployment    # Type of Kubernetes resource: Deployment
+metadata:
+  name: football-app-deployment # Unique name for this Deployment
+  labels:
+    app: football-app          # Labels for selection and organization
+spec:
+  replicas: 3 # PROD: Maintain 3 identical copies (Pods) of your application for High Availability
+  strategy:
+    type: RollingUpdate # PROD: Ensures zero-downtime during application updates
+    rollingUpdate:
+      maxSurge: 1       # Allows 1 new Pod to be created before an old one is terminated
+      maxUnavailable: 0 # Ensures no Pods are unavailable during an update
+  selector:
+    matchLabels:
+      app: football-app # Selects Pods with the label 'app: football-app' to manage
+  template:             # This is the blueprint for the Pods managed by this Deployment
+    metadata:
+      labels:
+        app: football-app # Labels applied to the Pods
+    spec:
+      # PROD: Pod Anti-Affinity - Instructs Kubernetes to try and spread Pods
+      # across different physical nodes (kubernetes.io/hostname) to prevent
+      # a single node failure from taking down all application replicas.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - football-app
+              topologyKey: kubernetes.io/hostname # Key to define "node" (e.g., separate nodes)
+      
+      # PROD: Security Context - Enforces running containers as a non-root user.
+      # This aligns with the 'football_user' you created in your Dockerfile.
+      securityContext:
+        runAsNonRoot: true
+      
+      containers:
+      - name: football-app # Name of the container within the Pod
+        image: kevinb770/football-app:latest # REPLACE with your Docker Hub username/image:tag
+        imagePullPolicy: Always # Always pull the latest image to ensure updates
+        ports:
+        - containerPort: 5000 # The port your Flask app listens on inside the container
+          name: http        # A name for the port
+        
+        # PROD: Environment Variables - Inject secrets from the 'football-app-secrets' Secret
+        env:
+        - name: FOOTBALL_API_KEY # Environment variable name in your Flask app
+          valueFrom:
+            secretKeyRef:
+              name: football-app-secrets # Name of the Kubernetes Secret to pull from
+              key: FOOTBALL_API_KEY      # Key within the Secret that holds the value
+        
+        # PROD: Resource Requests & Limits - Crucial for stability and performance.
+        # Requests: Minimum resources guaranteed for the container.
+        # Limits: Maximum resources the container can consume.
+        resources:
+          requests:
+            cpu: "100m"  # 100 milli-cores (0.1 CPU core)
+            memory: "128Mi" # 128 MiB of RAM
+          limits:
+            cpu: "250m"  # 250 milli-cores (0.25 CPU core)
+            memory: "256Mi" # 256 MiB of RAM
+        
+        # PROD: Liveness Probe - Checks if the container is still healthy.
+        # If it fails, Kubernetes will restart the container.
+        livenessProbe:
+          httpGet:
+            path: /      # Path to check (your app's root endpoint)
+            port: http   # Port to check on (named port 'http' for 5000)
+          initialDelaySeconds: 15 # Wait 15s after container start before first check
+          periodSeconds: 20       # Check every 20 seconds
+          timeoutSeconds: 5       # Timeout after 5 seconds
+          failureThreshold: 3     # Restart after 3 consecutive failures
+        
+        # PROD: Readiness Probe - Checks if the container is ready to receive traffic.
+        # If it fails, Kubernetes stops sending traffic to this Pod.
+        readinessProbe:
+          httpGet:
+            path: /      # Path to check
+            port: http   # Port to check on
+          initialDelaySeconds: 5 # Wait 5s after container start before first check
+          periodSeconds: 10      # Check every 10 seconds
+          timeoutSeconds: 5      # Timeout after 5 seconds
+          failureThreshold: 3    # Mark as unready after 3 consecutive failures

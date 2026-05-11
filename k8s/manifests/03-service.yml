@@ -1,0 +1,21 @@
+# k8s/manifests/03-service.yml
+# Purpose: Creates a stable internal network endpoint (Service) for your Deployment.
+# This allows other services within the cluster (like Ingress) to reliably
+# communicate with your application Pods, even if Pods are created or destroyed.
+
+apiVersion: v1 # API version for Service objects
+kind: Service  # Type of Kubernetes resource: Service
+metadata:
+  name: football-app-service # Unique name for this Service
+  labels:
+    app: football-app       # Labels for selection and organization
+spec:
+  type: ClusterIP # PROD: Makes the Service only reachable from within the cluster.
+                  # External access will be handled by Ingress.
+  ports:
+  - port: 80      # The port this Service will listen on
+    targetPort: 5000 # The port your application container (from Deployment) listens on
+    protocol: TCP # Protocol to use (TCP or UDP)
+  selector:
+    app: football-app # Selects Pods with this label to route traffic to
+
