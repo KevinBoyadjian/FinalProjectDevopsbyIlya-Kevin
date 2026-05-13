@@ -56,7 +56,7 @@ resource "aws_cloudfront_distribution" "main" {
   # we usually have to find its DNS name manually or via a Data Source 
   # AFTER the first deployment. For now, we use a descriptive placeholder.
   origin {
-    domain_name = "YOUR_ALB_DNS_NAME_WILL_GO_HERE" 
+    domain_name = "example.com" # Temporary name 
     origin_id   = "ALB-Origin"
 
     custom_origin_config {

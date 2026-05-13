@@ -41,25 +41,23 @@ resource "helm_release" "aws_load_balancer_controller" {
     namespace   = "kube-system" # Typically deployed in kube-system
     version     = "1.6.0" # Use a compatible version
 
-  set_sensitive = [
-    {
-      name  = "clusterName"
-      value = module.eks_cluster.cluster_name
-    }
-  ] 
+   set_sensitive {
+    name  = "clusterName"
+    value = module.eks_cluster.cluster_name
+  } 
 
-  set = [
-    {
-      name  = "serviceAccount.create"
-      value = "true"
-    },
-    {
-      name  = "serviceAccount.name"
-      value = "aws-load-balancer-controller"
-    },
-    {
-      name  = "image.repository"
-      value = "public.ecr.aws/eks/aws-load-balancer-controller"
-    }
-  ]
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = "aws-load-balancer-controller"
+  }
+
+  set {
+    name  = "image.repository"
+    value = "public.ecr.aws/eks/aws-load-balancer-controller"
+  }
 }

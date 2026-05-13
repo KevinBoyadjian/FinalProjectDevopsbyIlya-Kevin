@@ -19,7 +19,7 @@ variable "environment" {
 variable "cluster_version" {
     description = "kubernetes version for the EKS cluster"
     type        = string
-    default     = "1.28"
+    default     = "1.30"
 }
 
 variable "instance_types" {
