@@ -52,3 +52,11 @@ provider "helm" {
     }
   }
 }
+
+terraform {
+  backend "s3" {
+    bucket = "ilya-project-tf-state" # Use your bucket name
+    key    = "state/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
