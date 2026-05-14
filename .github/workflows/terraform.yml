@@ -45,7 +45,7 @@ jobs:
             - name: Terraform Init # Changes into the 'terraform' folder and initializes the project. It downloads the required AWS and Kubernetes provider plugins.
               run: |
                 cd terraform
-                terraform init      
+                terraform init -upgrade      
 
 # 6. Validation and Planning (The Safety Checks)
             - name: Terraform Validate # A quick syntax check in .tf files. Stops if any syntax issue found.

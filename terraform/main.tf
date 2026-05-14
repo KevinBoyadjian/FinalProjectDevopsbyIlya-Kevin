@@ -1,7 +1,7 @@
 # EKS Cluster (using the official module)
 module "eks_cluster" {
     source  = "terraform-aws-modules/eks/aws"
-    version = "~> 19.0" # Use a compatible version
+    version = "~> 20.0" # Use a compatible version
     kms_key_administrators = ["arn:aws:iam::219127327432:user/ilya"]
     
     cluster_name    = "${var.project_name}-${var.environment}-eks"
@@ -12,7 +12,7 @@ module "eks_cluster" {
 
 # The Access fixes (github actions and aws user)
     authentication_mode                         = "API_AND_CONFIG_MAP"
-    enable_cluster_creation_admin_permissions   = true
+    enable_cluster_creator_admin_permissions   = true
 
 # ilya
     access_entries = {
