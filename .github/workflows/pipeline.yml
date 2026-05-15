@@ -62,7 +62,7 @@ jobs:
       - name: Terraform Init & Apply
         run: |
           cd terraform
-          terraform init
+          terraform init -upgrade
           terraform apply -auto-approve
 
       # 2. Connect to Cluster
