@@ -58,9 +58,32 @@ resource "time_sleep" "wait_for_iam" {
   create_duration = "60s"
 }
 
+# ... [Keep your IAM Role and Policy resources as they are] ...
+
 # ---------------------------------------------------------------------------------------------------------------------
 # AWS LOAD BALANCER CONTROLLER - HELM INSTALLATION
 # ---------------------------------------------------------------------------------------------------------------------
+
+resource "null_resource" "aws_lb_controller_crds" {
+  triggers = {
+    # FIXED: Using cluster_name for v20 compatibility
+    cluster_name = module.eks_cluster.cluster_name
+    # timestamp    = timestamp() 
+  }
+
+  provisioner "local-exec" {
+    command = <<EOT
+      # FIXED: Using cluster_name instead of cluster_id
+      aws eks update-kubeconfig --name ${module.eks_cluster.cluster_name} --region us-east-1
+      kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.6.0/helm/aws-load-balancer-controller/crds/crds.yaml
+    EOT  
+    working_dir = path.cwd 
+  }
+
+  depends_on = [
+    module.eks_cluster 
+  ]
+}
 
 resource "helm_release" "lb_controller" {
   name       = "aws-load-balancer-controller"
@@ -69,8 +92,14 @@ resource "helm_release" "lb_controller" {
   namespace  = "kube-system"
   version    = "1.6.2"
   
-  depends_on = [time_sleep.wait_for_iam]
+  skip_crds = true
 
+  depends_on = [
+    time_sleep.wait_for_iam,
+    null_resource.aws_lb_controller_crds
+  ]
+
+  # Use the '=' sign and square brackets [] as the error requested
   set = [
     {
       name  = "clusterName"
