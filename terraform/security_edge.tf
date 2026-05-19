@@ -52,17 +52,17 @@ resource "aws_cloudfront_distribution" "main" {
   web_acl_id = aws_wafv2_web_acl.main.arn
 
   # The 'Origin' is your ALB. 
-  # Note: Since the ALB is created by the K8s Ingress Controller, 
-  # we usually have to find its DNS name manually or via a Data Source 
-  # AFTER the first deployment. For now, we use a descriptive placeholder.
+  # Note: Since the ALB is created by the K8s Ingress Controller.
+  # This ensures CloudFront always looks at the same place, and the ExternalDNS controller ensures that place always points to the right ALB.
+
   origin {
-    domain_name = "example.com" # Temporary name 
+    domain_name = "api.top5score.com" 
     origin_id   = "ALB-Origin"
 
 # THE SECRET HANDSHAKE
     custom_header {
       name  = "X-Custom-Header"
-      value = "${var.project_name}-Qa@vD6Yu8!@#31oP-DvdcDVAR-7"
+      value = "flask-devsecops-Qa@vD6Yu8!@#31oP-DvdcDVAR-7"
     }
 
     custom_origin_config {

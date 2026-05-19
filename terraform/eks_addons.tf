@@ -58,7 +58,62 @@ resource "time_sleep" "wait_for_iam" {
   create_duration = "60s"
 }
 
-# ... [Keep your IAM Role and Policy resources as they are] ...
+# ---------------------------------------------------------------------------------------------------------------------
+# EXTERNAL DNS - IAM INFRASTRUCTURE (Route53 Automation)
+# ---------------------------------------------------------------------------------------------------------------------
+
+# 1. The Permissions: What is the "ExternalDNS" software allowed to do?
+resource "aws_iam_policy" "external_dns" {
+  name        = "${var.project_name}-external-dns-policy"
+  description = "Allow ExternalDNS to update Route53"
+  policy      = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["route53:ChangeResourceRecordSets"]
+        Resource = ["arn:aws:route53:::hostedzone/Z009328231GYPRN2AA3CY"]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["route53:ListHostedZones", "route53:ListResourceRecordSets"]
+        Resource = ["*"]
+      }
+    ]
+  })
+}
+
+# 2. The Trust Relationship: Who is allowed to "become" this role?
+# This links your EKS Cluster's OIDC provider to the ExternalDNS software.
+data "aws_iam_policy_document" "external_dns_assume_role_policy" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+    principals {
+      type        = "Federated"
+      identifiers = [module.eks_cluster.oidc_provider_arn]
+    }
+    condition {
+      test     = "StringEquals"
+      # This ensures ONLY the external-dns pod in the kube-system namespace can use this role
+      variable = "${replace(module.eks_cluster.cluster_oidc_issuer_url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:kube-system:external-dns"]
+    }
+  }
+}
+
+# 3. The Role: The actual "Identity" created in AWS
+resource "aws_iam_role" "external_dns" {
+  name               = "${var.project_name}-external-dns-role"
+  assume_role_policy = data.aws_iam_policy_document.external_dns_assume_role_policy.json
+}
+
+# 4. The Attachment: Glue the Permissions (Step 1) to the Role (Step 3)
+resource "aws_iam_role_policy_attachment" "external_dns_attach" {
+  role       = aws_iam_role.external_dns.name
+  policy_arn = aws_iam_policy.external_dns.arn
+}
+
 
 # ---------------------------------------------------------------------------------------------------------------------
 # AWS LOAD BALANCER CONTROLLER - HELM INSTALLATION
