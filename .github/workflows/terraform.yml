@@ -44,8 +44,34 @@ jobs:
           cd terraform
           terraform init -reconfigure -upgrade
 
-      - name: Terraform Destroy
+
+      - name: Terraform Plan
+      # Add the secret here so 'Plan' doesn't fail due to a missing variable
+        env:
+          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          cd terraform
+          terraform plan
+
+      - name: Terraform Apply
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
+        env:
+          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          cd terraform
+          terraform apply -auto-approve
+
+      - name: Terraform Destroy
+      # You should also add it here just in case Terraform needs to refresh the resource before deleting
+        env:
+          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+        run: |
+          cd terraform
+          terraform destroy -auto-approve
+
+      - name: Terraform Destroy
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
         run: |
           cd terraform
           terraform destroy -auto-approve
