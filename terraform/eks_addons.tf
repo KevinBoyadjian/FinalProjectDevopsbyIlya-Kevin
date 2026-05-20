@@ -182,3 +182,44 @@ resource "helm_release" "lb_controller" {
     }
   ]
 }
+
+# ---------------------------------------------------------------------------------------------------------------------
+# EXTERNAL DNS - HELM INSTALLATION (THE MISSING PIECE)
+# ---------------------------------------------------------------------------------------------------------------------
+
+resource "helm_release" "external_dns" {
+  name       = "external-dns"
+  repository = "https://kubernetes-sigs.github.io/external-dns/"
+  chart      = "external-dns"
+  namespace  = "kube-system"
+  version    = "1.13.1"
+
+  set = [
+    {
+      name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+      value = aws_iam_role.external_dns.arn
+    },
+    {
+      name  = "serviceAccount.name"
+      value = "external-dns"
+    },
+    {
+      name  = "sources"
+      value = "{ingress}"
+    },
+    {
+      name  = "domainFilters"
+      value = "{top5score.com}"
+    },
+    {
+      name  = "provider"
+      value = "aws"
+    }
+  ]
+
+  # Ensure the Load Balancer Controller and IAM are ready first
+  depends_on = [
+    helm_release.lb_controller,
+    aws_iam_role_policy_attachment.external_dns_attach
+  ]
+}
