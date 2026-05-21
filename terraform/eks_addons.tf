@@ -33,6 +33,15 @@ resource "aws_iam_role" "lb_controller" {
   name               = "${var.project_name}-lb-controller-role"
   assume_role_policy = data.aws_iam_policy_document.lb_controller_assume_role_policy.json
   tags = var.common_tags
+
+  # This acts as a "Graceful Shutdown" timer.
+  # When you run 'destroy', Terraform will wait 30 seconds before 
+  # deleting this role, giving the Load Balancer Controller time 
+  # to use this role to delete the real ALBs in AWS.
+  provisioner "local-exec" {
+    when    = destroy
+    command = "sleep 30"
+  }
 }
 
 # 3. This creates a custom IAM Policy using the content of your JSON file
