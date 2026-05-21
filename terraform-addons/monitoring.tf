@@ -13,11 +13,11 @@ data "aws_iam_policy_document" "prometheus_assume_role_policy" {
     effect  = "Allow"
     principals {
       type        = "Federated"
-      identifiers = [module.eks_cluster.oidc_provider_arn]
+      identifiers = [data.terraform_remote_state.core.outputs.oidc_provider_arn]
     }
     condition {
       test     = "StringEquals"
-      variable = "${replace(module.eks_cluster.cluster_oidc_issuer_url, "https://", "")}:sub"
+      variable = "${replace(data.terraform_remote_state.core.outputs.cluster_oidc_issuer_url, "https://", "")}:sub"
       values   = ["system:serviceaccount:monitoring:kube-prometheus-stack-prometheus"]
     }
   }
@@ -43,46 +43,48 @@ resource "helm_release" "prometheus_stack" {
 
   wait = false
 
-  # Use the '=' sign and square brackets [] to match your provider version
-  set = [
     # --- PROMETHEUS IAM ROLE (IRSA) ---
-    {
-      name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-      value = aws_iam_role.prometheus_role.arn
-    },
-    {
-      name  = "prometheus.serviceAccount.create"
-      value = "true"
-    },
-    {
-      name  = "prometheus.serviceAccount.name"
-      value = "kube-prometheus-stack-prometheus"
-    },
+  set {
+    name  = "prometheus.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = aws_iam_role.prometheus_role.arn
+  }
+
+  set {
+    name  = "prometheus.serviceAccount.create"
+    value = "true"
+  }
+
+  set {
+    name  = "prometheus.serviceAccount.name"
+    value = "kube-prometheus-stack-prometheus"
+  }
 
     # --- OPTIMIZATION FOR T3.MEDIUM NODES ---
-    {
-      name  = "prometheus.prometheusSpec.resources.requests.memory"
-      value = "512Mi"
-    },
-    {
-      name  = "prometheus.prometheusSpec.retention"
-      value = "1d"
-    },
+  set {
+    name  = "prometheus.prometheusSpec.resources.requests.memory"
+    value = "512Mi"
+  }
+
+  set {
+    name  = "prometheus.prometheusSpec.retention"
+    value = "1d"
+  }
 
     # --- GRAFANA CONFIGURATION ---
-    {
-      name  = "grafana.enabled"
-      value = "true"
-    },
-    {
-      name  = "grafana.adminPassword"
-      value = "var.grafana_admin_password"
-    },
-    {
-      name  = "grafana.ingress.enabled"
-      value = "false"
-    }
-  ]
+  set {
+    name  = "grafana.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "grafana.adminPassword"
+    value = var.grafana_admin_password
+  }
+  
+  set {
+    name  = "grafana.ingress.enabled"
+    value = "false"
+  }
 }
 
 

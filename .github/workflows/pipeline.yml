@@ -69,7 +69,15 @@ jobs:
       # 2. Connect to Cluster
       - name: Update Kubeconfig
         run: |
-          aws eks update-kubeconfig --name flask-devsecops-dev-eks-v2 --region us-east-1
+          # Initialize the Core folder to download the state
+          cd terraform-core
+          terraform init -reconfigure -upgrade
+
+          # Extract the true cluster name directly from the Terraform State
+          CLUSTER_NAME=$(terraform output -raw cluster_name)
+
+          # Connect to the cluster
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region us-east-1
 
       # 3. Inject API Key & Deploy App (# Create secret with all three variables from GitHub)
       - name: K8s Deploy

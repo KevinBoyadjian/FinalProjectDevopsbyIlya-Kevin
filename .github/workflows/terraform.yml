@@ -8,13 +8,14 @@ on:
     workflow_dispatch:
         inputs:
             action:
-                description: 'terraform Action (plan or apply)'
+                description: 'Terraform Action (plan, apply or destroy)'
                 required: true
                 default: 'plan'
                 type: choice
                 options:
                     - plan
                     - apply
+                    - destroy
 
 # 2. Security & Permissions - The OIDC Passwordless AWS login
 permissions:
@@ -22,7 +23,7 @@ permissions:
     contents: read  # Standard permission allowing the runner to download your repository code.
 
 jobs:
-  terraform-deploy:
+  terraform-lifecycle:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -39,39 +40,70 @@ jobs:
         with:
           terraform_version: "1.7.0"
 
-      - name: Terraform Init
+      # ==========================================
+      # LAYER 1: CORE (Networking & EKS)
+      # ==========================================
+
+      - name: Terraform Init (CORE)
         run: |
-          cd terraform
+          cd terraform-core
           terraform init -reconfigure -upgrade
 
 
-      - name: Terraform Plan
-      # Add the secret here so 'Plan' doesn't fail due to a missing variable
-        env:
-          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-        run: |
-          cd terraform
+      - name: Terraform Plan (CORE)
+        if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
+        run: 
+          cd terraform-core
           terraform plan
 
-      - name: Terraform Apply
+      - name: Terraform Apply (CORE)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
-        env:
-          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         run: |
-          cd terraform
+          cd terraform-core
           terraform apply -auto-approve
 
-      - name: Terraform Destroy
-      # You should also add it here just in case Terraform needs to refresh the resource before deleting
+      # ==========================================
+      # LAYER 2: ADD-ONS (Monitoring & Ingress)
+      # ==========================================
+
+      - name: Terraform Init (ADD-ONS)
+# We only init if we are planning or applying (Destroy has its own init later)
+        if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
+        run: |
+          cd terraform-addons
+          terraform init -reconfigure -upgrade
+
+      - name: Terraform Plan (ADD-ONS)
+        if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
         env:
           TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
         run: |
-          cd terraform
+          cd terraform-addons
+          terraform plan
+
+      - name: Terraform Apply (ADD-ONS)
+        if: github.event.inputs.action == 'apply'
+        env:
+          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          cd terraform-addons
+          terraform apply -auto-approve
+
+      # ==========================================
+      # CLEANUP: DESTROY LOGIC
+      # ==========================================
+
+      - name: Terraform Destroy (ADD-ONS)
+        if: github.event.inputs.action == 'destroy'
+        env:
+          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          cd terraform-addons
+          terraform init -reconfigure -upgrade
           terraform destroy -auto-approve
 
-#      - name: Terraform Destroy
-#        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
-#        run: |
-#          cd terraform
-#          terraform destroy -auto-approve
+      - name: Terraform Destroy (CORE)
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          cd terraform-core
+          terraform destroy -auto-approve
