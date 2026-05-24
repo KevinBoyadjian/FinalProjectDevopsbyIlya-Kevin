@@ -1,0 +1,40 @@
+name: "1. Infrastructure Core"
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action (plan, apply, destroy)'
+        required: true
+        default: 'plan'
+        type: choice
+        options: [plan, apply, destroy]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: us-east-1
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Terraform Core Logic
+        run: |
+          cd terraform-core
+          terraform init -reconfigure -upgrade
+          if [ "${{ github.event.inputs.action }}" == "plan" ]; then
+            terraform plan
+          elif [ "${{ github.event.inputs.action }}" == "apply" ]; then
+            terraform apply -auto-approve
+          elif [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            terraform destroy -auto-approve
+          fi

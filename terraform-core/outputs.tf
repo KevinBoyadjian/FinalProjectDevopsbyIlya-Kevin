@@ -3,7 +3,9 @@ output "project_name" {
   value       = var.project_name
 }
 
-
+output "external_dns_role_arn" {
+  value = aws_iam_role.external_dns.arn
+}
 
 output "cluster_name" {
     description = "The name of the EKS cluster"
@@ -45,11 +47,6 @@ output "public_subnet_ids" {
     value       = module.vpc.public_subnets
 }
 
-output "kubeconfig_command" {
-    description = "Command to update your local kubeconfig"
-    value       = "aws eks update-kubeconfig --region ${var.aws_region} -- name ${module.eks_cluster.cluster_name}"
-}
-
 # 1. The CloudFront URL
 # This is the public address of your global website
 output "cloudfront_domain_name" {
@@ -77,4 +74,3 @@ output "update_kubeconfig_command" {
   description = "Command to update your local kubeconfig to connect to the cluster"
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks_cluster.cluster_name}"
 }
-
