@@ -52,7 +52,7 @@ jobs:
 
       - name: Terraform Plan (CORE)
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
-        run: 
+        run: |
           cd terraform-core
           terraform plan
 
