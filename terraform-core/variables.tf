@@ -71,4 +71,9 @@ variable "common_tags" {
         ManagedBy = "Terraform"
         project   = "DevSecOpsFlask"
     }
+variable "alb_handshake_secret" {
+    description = "The secret header value for CloudFront to ALB authentication"
+    type        = string
+    sensitive   = true # This masks the password in the logs
+    }
 }

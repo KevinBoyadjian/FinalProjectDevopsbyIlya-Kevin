@@ -22,7 +22,7 @@ resource "null_resource" "football_app_ingress" {
       kubectl apply -f - <<EOF
       ${templatefile("../k8s/ingress.tpl", { # Relative path to ingress.tpl
         hostname            = "api.top5score.com",
-        secret_header_value = "flask-devsecops-Qa@vD6Yu8!@#31oP-DvdcDVAR-7" # Replace with your actual secret
+        secret_header_value = var.alb_handshake_secret
       })}
       EOF
     EOT

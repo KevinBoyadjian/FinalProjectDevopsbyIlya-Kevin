@@ -62,7 +62,7 @@ resource "aws_cloudfront_distribution" "main" {
 # THE SECRET HANDSHAKE
     custom_header {
       name  = "X-Custom-Header"
-      value = "flask-devsecops-Qa@vD6Yu8!@#31oP-DvdcDVAR-7"
+      value = var.alb_handshake_secret
     }
 
     custom_origin_config {
