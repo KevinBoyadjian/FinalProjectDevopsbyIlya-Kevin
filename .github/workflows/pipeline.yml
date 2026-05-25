@@ -32,11 +32,30 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: |
+      
+      - name: Build Docker image
+        run: |
           docker build -f docker/Dockerfile -t ${{ secrets.DOCKERHUB_USERNAME }}/football-app:${{ github.sha }} .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/football-app:${{ github.sha }}
           docker tag ${{ secrets.DOCKERHUB_USERNAME }}/football-app:${{ github.sha }} ${{ secrets.DOCKERHUB_USERNAME }}/football-app:latest
+
+  # --- TRIVY SCAN: The Security Gate ---
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/football-app:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1' # This stops the pipeline if CRITICAL bugs are found
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Push Docker image
+        if: success()
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/football-app:${{ github.sha }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/football-app:latest
+
+          
 
   # JOB 3: THE ONE-CLICK DEPLOY (Using your OIDC Role)
   provision-and-deploy:
