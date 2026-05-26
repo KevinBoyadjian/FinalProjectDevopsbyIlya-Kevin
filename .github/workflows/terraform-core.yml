@@ -28,6 +28,8 @@ jobs:
           terraform_version: "1.7.0"
 
       - name: Terraform Core Logic
+        env:
+          TF_VAR_alb_handshake_secret: ${{ secrets.ALB_HANDSHAKE_SECRET }}
         run: |
           cd terraform-core
           terraform init -reconfigure -upgrade
