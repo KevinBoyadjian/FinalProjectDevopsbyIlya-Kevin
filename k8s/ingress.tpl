@@ -26,7 +26,7 @@ metadata:
 
     # The secret handshake between CDN and Load Balancer (security_edge)
     alb.ingress.kubernetes.io/conditions.football-app-service: >
-      [{"field":"http-header","httpHeaderConfig":{"httpHeaderName": "X-Custom-Header", "values":["flask-devsecops-Qa@vD6Yu8!@#31oP-DvdcDVAR-7"]}}]
+      [{"field":"http-header","httpHeaderConfig":{"httpHeaderName": "X-Custom-Header", "values":["${secret_header_value}"]}}]
 
 
     # Optional: Enable HTTP to HTTPS redirect and specify SSL certificate.
@@ -37,7 +37,8 @@ metadata:
 spec:
   ingressClassName: alb # PROD: Specifies that the AWS Load Balancer Controller should manage this Ingress
   rules:
-    - http:
+    - host: "api.top5score.com"
+      http:
         paths:
           - path: / # Route all traffic hitting the root path
             pathType: Prefix # Matches all paths that start with /

@@ -98,7 +98,15 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true # Use *.cloudfront.net certificate for now
+    acm_certificate_arn      = aws_acm_certificate.main.arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  # Ensure users are forced to use HTTPS
+  default_cache_behavior {
+  
+    viewer_protocol_policy = "redirect-to-https"
   }
 
   tags = var.common_tags

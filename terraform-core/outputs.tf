@@ -47,6 +47,11 @@ output "public_subnet_ids" {
     value       = module.vpc.public_subnets
 }
 
+output "ssl_certificate_arn" {
+  value = aws_acm_certificate.main.arn
+}
+
+
 # 1. The CloudFront URL
 # This is the public address of your global website
 output "cloudfront_domain_name" {
