@@ -74,9 +74,19 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   default_cache_behavior {
+    # The Required Arguments
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = "ALB-Origin"
+    
+    # Force users to use https
+    viewer_protocol_policy = "redirect-to-https" # Force HTTPS for users
+
+
+    # The Live Score Behavior Settings (cache)
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
 
     forwarded_values {
       query_string = true
@@ -84,11 +94,6 @@ resource "aws_cloudfront_distribution" "main" {
         forward = "all"
       }
     }
-
-    viewer_protocol_policy = "redirect-to-https" # Force HTTPS for users
-    min_ttl                = 0
-    default_ttl            = 0
-    max_ttl                = 0
   }
 
   restrictions {
@@ -101,12 +106,6 @@ resource "aws_cloudfront_distribution" "main" {
     acm_certificate_arn      = aws_acm_certificate.main.arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
-  }
-
-  # Ensure users are forced to use HTTPS
-  default_cache_behavior {
-  
-    viewer_protocol_policy = "redirect-to-https"
   }
 
   tags = var.common_tags
