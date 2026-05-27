@@ -18,7 +18,7 @@ module "eks_cluster" {
     authentication_mode                        = "API_AND_CONFIG_MAP"
     enable_cluster_creator_admin_permissions   = true
 
-# ilya
+
     access_entries = {
       ilya_local = {
         principal_arn       = "arn:aws:iam::219127327432:user/ilya"
@@ -29,7 +29,7 @@ module "eks_cluster" {
             }
         }
     }
-# kevinb
+
       kevinb_local = {
         principal_arn       = "arn:aws:iam::219127327432:user/kevinb"
         policy_associations = {
@@ -39,7 +39,7 @@ module "eks_cluster" {
             }
         }      
     }
-}    
+    
 # EKS Managed Node Group
     eks_managed_node_groups = {
         default = {
@@ -55,7 +55,7 @@ module "eks_cluster" {
             }
         }
     }
-
+}
     # Cluster endpoint access
     cluster_endpoint_private_access = true
     cluster_endpoint_public_access  = true
