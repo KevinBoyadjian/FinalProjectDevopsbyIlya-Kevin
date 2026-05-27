@@ -13,6 +13,9 @@ COPY requirements.txt .
 # Install dependencies to a temporary folder
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
+# 2. THE FORCE PATCH: Overwrite any transitive downgrades into the same folder
+RUN pip install --no-cache-dir --upgrade --prefix=/install "urllib3>=2.7.0"
+
 
 
 # --- STAGE 2: Final Runtime ---
