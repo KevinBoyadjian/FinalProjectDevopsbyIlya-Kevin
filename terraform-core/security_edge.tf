@@ -58,7 +58,7 @@ resource "aws_cloudfront_distribution" "main" {
   # This ensures CloudFront always looks at the same place, and the ExternalDNS controller ensures that place always points to the right ALB.
 
   origin {
-    domain_name = "origin.top5score.com" 
+    domain_name = "origin.top5score.com"
     origin_id   = "ALB-Origin"
 
 # THE SECRET HANDSHAKE
