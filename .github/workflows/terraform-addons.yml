@@ -39,5 +39,18 @@ jobs:
           elif [ "${{ github.event.inputs.action }}" == "apply" ]; then
             terraform apply -auto-approve
           elif [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+
+            # --- THE JANITOR STARTS HERE ---
+                  # A. Go into Core folder to find the cluster name
+            cd ../terraform-core
+            terraform init -backend=true -get=false -reconfigure
+            CLUSTER_NAME=$(terraform output -raw cluster_name)
+                  # B. Connect the robot to the cluster
+            aws eks update-kubeconfig --name $CLUSTER_NAME --region us-east-1
+            
+                  # C. Force delete all Ingresses to trigger ALB cleanup immediately
+            echo "Starting Janitor: Purging Ingresses..."
+            kubectl delete ingress --all -A --timeout=30s || true
+
             terraform destroy -auto-approve
           fi

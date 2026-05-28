@@ -28,6 +28,14 @@ resource "kubernetes_namespace" "monitoring" {
   metadata {
     name = "monitoring"
   }
+
+
+  # THE AUTOMATION HOOK:
+  # This breaks the "Terminating" deadlock automatically
+  provisioner "local-exec" {
+    when    = destroy
+    command = "kubectl patch ns ${self.metadata[0].name} -p '{\"spec\":{\"finalizers\":null}}' --type=merge || true"
+  }
 }
 
 resource "aws_iam_role" "lb_controller" {

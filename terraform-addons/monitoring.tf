@@ -147,6 +147,13 @@ resource "kubernetes_ingress_v1" "grafana_ingress" {
   # 1. Don't let Terraform hang waiting for AWS to delete the ALB
   wait_for_load_balancer = false
 
+  # THE AUTOMATION HOOK:
+  # This runs automatically during 'terraform destroy'
+  provisioner "local-exec" {
+    when    = destroy
+    command = "kubectl patch ingress ${self.metadata[0].name} -n ${self.metadata[0].namespace} -p '{\"metadata\":{\"finalizers\":null}}' --type=merge || true"
+  }
+
   # 2. Ensures Ingress is created AFTER the app, and deleted BEFORE the app
   depends_on = [helm_release.prometheus_stack]
 }

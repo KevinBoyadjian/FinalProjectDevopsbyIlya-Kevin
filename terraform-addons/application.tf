@@ -4,14 +4,21 @@
 resource "null_resource" "football_app_ingress" {
   # Triggers ensure it reruns if the hostname or secret_header_value changes
   triggers = {
-    hostname          = "api.top5score.com"
+    hostname            = "api.top5score.com"
     secret_header_value = "flask-devsecops-Qa@vD6Yu8!@#31oP-DvdcDVAR-7" # Replace with your actual secret
-    cluster_name      = data.terraform_remote_state.core.outputs.cluster_name
+    cluster_name        = data.terraform_remote_state.core.outputs.cluster_name
     
     # Ensure it only applies after external-dns is ready
-    external_dns_ready = helm_release.external_dns.id 
+    external_dns_ready  = helm_release.external_dns.id 
     lb_controller_ready = helm_release.lb_controller.id # Ensure LB Controller is also ready
   }
+
+  provisioner "local-exec" {
+    when    = destroy
+    # Force delete the ingress and strip finalizers if it hangs
+    command = "kubectl delete ingress football-app-ingress -n default --now || true"
+  }
+
 
   provisioner "local-exec" {
     command = <<EOT
