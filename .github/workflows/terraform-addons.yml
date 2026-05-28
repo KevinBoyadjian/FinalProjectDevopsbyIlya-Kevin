@@ -39,6 +39,6 @@ jobs:
           elif [ "${{ github.event.inputs.action }}" == "apply" ]; then
             terraform apply -auto-approve
           elif [ "${{ github.event.inputs.action }}" == "destroy" ]; then
-
-            terraform destroy -auto-approve -input=false
+            terraform state list | xargs -I {} terraform state rm {} || echo "State already empty"
+            # terraform destroy -auto-approve -input=false
           fi
