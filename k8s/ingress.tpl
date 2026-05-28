@@ -36,8 +36,9 @@ metadata:
     # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123456789012:certificate/your-cert-id
 spec:
   ingressClassName: alb # PROD: Specifies that the AWS Load Balancer Controller should manage this Ingress
+# 1. The Public Identity (What CloudFront forwards)
   rules:
-    - host: "origin.top5score.com"
+    - host: "top5score.com"
       http:
         paths:
           - path: / # Route all traffic hitting the root path
@@ -48,3 +49,14 @@ spec:
                 port:
                   number: 80 # Target port on the Service (from 03-service.yaml)
 
+# 2. The Internal Identity (The "Bridge" name)
+    - host: "origin.top5score.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: football-app-service
+                port:
+                  number: 80
