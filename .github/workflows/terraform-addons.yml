@@ -34,11 +34,12 @@ jobs:
         run: |
           cd terraform-addons
           terraform init -reconfigure -upgrade
+
           if [ "${{ github.event.inputs.action }}" == "plan" ]; then
-            terraform plan
-          elif [ "${{ github.event.inputs.action }}" == "apply" ]; then
-            terraform apply -auto-approve
-          elif [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            terraform plan -input=false
+
+            elif [ "${{ github.event.inputs.action }}" == "apply" ]; then
+            terraform apply -auto-approve -input=false
 
           elif [ "${{ github.event.inputs.action }}" == "destroy" ]; then
             echo "Starting Janitor: Cleaning up Kubernetes resources before destroy..."
