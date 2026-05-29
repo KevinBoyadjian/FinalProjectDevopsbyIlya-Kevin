@@ -23,8 +23,6 @@ metadata:
 
     # THE MAGIC LINE for top5score.com the "hidden" bridge between the Load Balancer and CloudFront.
     external-dns.alpha.kubernetes.io/hostname: "origin.top5score.com"
-        # THE DYNAMIC FIX: Point the record to the CloudFront URL automatically
-        # external-dns.alpha.kubernetes.io/target: "${cloudfront_target}"
 
     # The secret handshake between CDN and Load Balancer (security_edge)
     alb.ingress.kubernetes.io/conditions.football-app-service: '[{"field":"http-header","httpHeaderConfig":{"httpHeaderName": "X-Custom-Header", "values":["${secret_header_value}"]}}]'
