@@ -28,11 +28,14 @@ jobs:
           terraform_version: "1.7.0"
 
       - name: Terraform Add-ons Logic
+        working-directory: ./terraform-addons
+          echo "current path $(pwd)"
+          la -la
         env:
           TF_VAR_alb_handshake_secret: ${{ secrets.ALB_HANDSHAKE_SECRET }}
           TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         run: |
-          cd terraform-addons
+          # cd terraform-addons
           terraform init -reconfigure -upgrade
           if [ "${{ github.event.inputs.action }}" == "plan" ]; then
             terraform plan -input=false
