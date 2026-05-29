@@ -35,10 +35,10 @@ jobs:
           cd terraform-addons
           terraform init -reconfigure -upgrade
           if [ "${{ github.event.inputs.action }}" == "plan" ]; then
-            terraform plan
+            terraform plan -input=false
           elif [ "${{ github.event.inputs.action }}" == "apply" ]; then
-            terraform apply -auto-approve
+            terraform apply -auto-approve -input=false
           elif [ "${{ github.event.inputs.action }}" == "destroy" ]; then
-            terraform state list | xargs -I {} terraform state rm {} || echo "State already empty"
-            # terraform destroy -auto-approve -input=false
+            
+            terraform destroy -auto-approve -input=false
           fi
