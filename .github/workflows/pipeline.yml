@@ -106,4 +106,4 @@ jobs:
           # This tells Kubernetes to update the 'app' container in 'football-app-deployment'
           # to use the new image tagged with the current commit SHA.
           
-          kubectl set image deployment/football-app-deployment app=${{ secrets.DOCKERHUB_USERNAME }}/football-app:${{ github.sha }} -n default
+          kubectl set image deployment/football-app-deployment football-app=${{ secrets.DOCKERHUB_USERNAME }}/football-app:${{ github.sha }} -n default
