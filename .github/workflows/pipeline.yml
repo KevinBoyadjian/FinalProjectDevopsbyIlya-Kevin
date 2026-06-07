@@ -99,13 +99,11 @@ jobs:
             --from-literal=FOOTBALL_API_BASE_URL="${{ secrets.FOOTBALL_API_BASE_URL }}" \
             --from-literal=SECRET_KEY="${{ secrets.SECRET_KEY }}" \
             --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl apply -f k8s/manifests
+          
           # Change 2: Update the Deployment image dynamically
           # This tells Kubernetes to update the 'app' container in 'football-app-deployment'
           # to use the new image tagged with the current commit SHA.
-          # We'll remove 'kubectl apply -f k8s/manifests/' because 'kubectl set image' is more precise for image updates.
-          # If your 'k8s/manifests/' contains other resources that need to be applied on every run, 
-          # you might keep 'kubectl apply -f k8s/manifests/' but ensure your Deployment YAML
-          # is *also* updated to use the unique tag (e.g., via Kustomize or a templating tool).
-          # For a direct image update, 'kubectl set image' is sufficient.
-          # kubectl apply -f k8s/manifests/
+          
           kubectl set image deployment/football-app-deployment app=${{ secrets.DOCKERHUB_USERNAME }}/football-app:${{ github.sha }} -n default
