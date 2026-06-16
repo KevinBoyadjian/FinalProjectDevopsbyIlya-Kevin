@@ -1,18 +1,17 @@
-async function refreshLiveMatches() {
+async function refreshAllLiveMatches() {
     const container = document.getElementById("matches-container");
     if (!container) return;
 
-    const league = container.dataset.league || "la-liga";
-
     try {
-        const response = await fetch(`/api/live?league=${league}`);
+        // Call the NEW endpoint that shows ALL competitions
+        const response = await fetch(`/api/live/all`);
 
         if (response.status === 429) {
             container.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-icon">⏳</div>
                     <h3>API limit reached</h3>
-                    <p>Too many requests. Please wait a little before refreshing again.</p>
+                    <p>Too many requests. Please wait a moment.</p>
                 </div>
             `;
             return;
@@ -24,9 +23,9 @@ async function refreshLiveMatches() {
         if (!matches.length) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-icon">⚠</div>
-                    <h3>No matches found right now</h3>
-                    <p>Try another league or refresh later.</p>
+                    <div class="empty-icon">⚽</div>
+                    <h3>No live matches right now</h3>
+                    <p>All 900+ competitions covered. Check back soon!</p>
                 </div>
             `;
             return;
@@ -78,11 +77,15 @@ async function refreshLiveMatches() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Call the function to load all live matches
+    refreshAllLiveMatches();
+
+    // Refresh every 30 seconds
+    setInterval(refreshAllLiveMatches, 30000);
+
+    // Optional: Add a refresh button if it exists
     const refreshButton = document.getElementById("refresh-btn");
-
     if (refreshButton) {
-        refreshButton.addEventListener("click", refreshLiveMatches);
+        refreshButton.addEventListener("click", refreshAllLiveMatches);
     }
-
-    setInterval(refreshLiveMatches, 30000);
 });
