@@ -1,7 +1,25 @@
+import importlib.util
 import os
 
-from dotenv import load_dotenv
-
+if importlib.util.find_spec("dotenv") is not None:
+    from dotenv import load_dotenv
+else:
+    def load_dotenv(dotenv_path=None):
+        if dotenv_path is None:
+            dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+        try:
+            with open(dotenv_path, "r") as env_file:
+                for line in env_file:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.strip().strip('"').strip("'")
+                    if key and key not in os.environ:
+                        os.environ[key] = value
+        except OSError:
+            pass
 
 load_dotenv()
 
