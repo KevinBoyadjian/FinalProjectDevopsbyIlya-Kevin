@@ -36,5 +36,5 @@ class Config:
 
     SEASON = os.getenv(
         "SEASON",
-        "2025"
+        "2026"
     )
