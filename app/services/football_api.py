@@ -291,44 +291,32 @@ class FootballAPIService:
         return matches
     
     def get_all_live_matches(self):
-        url = f"{self.base_url}/fixtures"
-        headers = self._get_headers()
+        """
+        Fetch ALL live matches from the Pro API (including World Cup 2026).
+        """
+        data = self._get(
+        "fixtures",
+        {
+            "live": "all",
+        },
+    )
 
-        params = {
-            'live': 'all',  # This gets every live match happening right now
-        }
+        matches = [
+            self._format_fixture(item)
+        for item in data.get("response", [])
+    ]
 
-        try:
-            response = requests.get(url, headers=headers, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+        print(f"DEBUG: Total live matches returned by Pro API: {len(matches)}")
+    
+        if matches:
+            leagues = list(set([m['league'] for m in matches]))
+        print(f"DEBUG: Leagues found: {leagues}")
 
-            # API-Football returns matches in data['response']
-            raw_matches = data.get('response', [])
-
-            # Transform the API response to your app's format
-            formatted_matches = []
-            for match in raw_matches:
-                formatted_matches.append({
-                    'id': match['fixture']['id'],
-                    'home_team': match['teams']['home']['name'],
-                    'away_team': match['teams']['away']['name'],
-                    'home_score': match['goals']['home'],
-                    'away_score': match['goals']['away'],
-                    'status': match['fixture']['status']['short'],
-                    'minute': match['fixture']['status']['elapsed'],
-                    'league': match['league']['name'],
-                    'league_logo': match['league']['logo'],
-                    'country': match['league']['country'],
-                    'stadium': match['fixture']['venue']['name'],
-                    'date': match['fixture']['date'],
-                })
-
-            return formatted_matches
-
-        except Exception as e:
-            print(f"Error fetching all live matches: {e}")
-            return []
+        return sorted(
+            matches,
+            key=lambda match: match.get("date", ""),
+            reverse=True,
+    )
 
 
     def get_matches_by_date(self, league_key=None, selected_date=None):
