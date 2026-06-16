@@ -82,19 +82,21 @@ def match_details(match_id):
     )
 
 
-@app.route("/api/live")
+@app.route("/api/live/all")
 def api_live():
     league = request.args.get("league")
     selected_date = request.args.get("date")
 
+    # NEW: If no league is specified, get ALL live matches across all competitions
     if not league:
-        return jsonify(
-            {
-                "mode": None,
-                "matches": [],
-            }
-        )
+        all_live_matches = football_service.get_all_live_matches()
+        return jsonify({
+            "mode": "all_live",
+            "total": len(all_live_matches),
+            "matches": all_live_matches,
+        })
 
+    # EXISTING: If a league is specified, use the old logic
     if selected_date:
         matches = football_service.get_matches_by_date(
             league_key=league,
@@ -109,12 +111,10 @@ def api_live():
             matches = football_service.get_upcoming_matches(league)
             mode = "upcoming"
 
-    return jsonify(
-        {
-            "mode": mode,
-            "matches": matches,
-        }
-    )
+    return jsonify({
+        "mode": mode,
+        "matches": matches,
+    })
 
 
 if __name__ == "__main__":

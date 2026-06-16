@@ -58,7 +58,7 @@ class FootballAPIService:
             "FOOTBALL_API_BASE_URL",
             "https://v3.football.api-sports.io",
         )
-        self.default_season = app_config.get("SEASON", "2025")
+        self.default_season = app_config.get("SEASON", "2026")
         self.worldcup_json_path = (
             Path(__file__).resolve().parents[1]
             / "data"
@@ -289,6 +289,47 @@ class FootballAPIService:
             )
 
         return matches
+    
+    def get_all_live_matches(self):
+        url = f"{self.base_url}/fixtures"
+        headers = self._get_headers()
+
+        params = {
+            'live': 'all',  # This gets every live match happening right now
+        }
+
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            # API-Football returns matches in data['response']
+            raw_matches = data.get('response', [])
+
+            # Transform the API response to your app's format
+            formatted_matches = []
+            for match in raw_matches:
+                formatted_matches.append({
+                    'id': match['fixture']['id'],
+                    'home_team': match['teams']['home']['name'],
+                    'away_team': match['teams']['away']['name'],
+                    'home_score': match['goals']['home'],
+                    'away_score': match['goals']['away'],
+                    'status': match['fixture']['status']['short'],
+                    'minute': match['fixture']['status']['elapsed'],
+                    'league': match['league']['name'],
+                    'league_logo': match['league']['logo'],
+                    'country': match['league']['country'],
+                    'stadium': match['fixture']['venue']['name'],
+                    'date': match['fixture']['date'],
+                })
+
+            return formatted_matches
+
+        except Exception as e:
+            print(f"Error fetching all live matches: {e}")
+            return []
+
 
     def get_matches_by_date(self, league_key=None, selected_date=None):
         if not selected_date:
