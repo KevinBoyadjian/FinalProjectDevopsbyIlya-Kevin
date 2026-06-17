@@ -113,8 +113,10 @@ class FootballAPIService:
         return self.default_season
 
     def get_available_dates(self, league_key=None):
-        today = date.today()
-        return [(today + timedelta(days=i)).isoformat() for i in range(0, 14)]
+        # Start from June 11th (Tournament Start) until the end of the tournament
+        start_date = date(2026, 6, 11)
+        # Create a list of 40 days to cover the whole tournament
+        return [(start_date + timedelta(days=i)).isoformat() for i in range(0, 40)]
 
     def get_default_date(self, available_dates):
         today = date.today().isoformat()
@@ -135,16 +137,7 @@ class FootballAPIService:
         print(f"DEBUG: Total live matches: {len(matches)}")
         return sorted(matches, key=lambda x: x.get("date", ""), reverse=True)
 
-    def get_matches_by_date(self, league_key=None, selected_date=None):
-        if not selected_date: selected_date = date.today().isoformat()
-        league_ids = self._get_league_ids(league_key)
-        season = self._get_league_season(league_key)
-        matches = []
-        for league_id in league_ids:
-            data = self._get("fixtures", {"league": league_id, "season": season, "date": selected_date})
-            matches.extend([self._format_fixture(item) for item in data.get("response", [])])
-        return matches
-
+    
     def get_upcoming_matches(self, league_key=None, limit=10):
         league_ids = self._get_league_ids(league_key)
         season = self._get_league_season(league_key)
@@ -169,3 +162,32 @@ class FootballAPIService:
         if not response: return []
         table = response[0]["league"]["standings"][0]
         return [{"position": t["rank"], "team": t["team"]["name"], "points": t["points"]} for t in table]
+
+    def get_matches_by_date(self, league_key=None, selected_date=None):
+        if not selected_date:
+            selected_date = date.today().isoformat()
+
+        league_ids = self._get_league_ids(league_key)
+        season = self._get_league_season(league_key)
+        matches = []
+
+        for league_id in league_ids:
+            # This calls the Pro API for the specific date
+            data = self._get(
+                "fixtures",
+                {
+                    "league": league_id,
+                    "season": season,
+                    "date": selected_date,
+                },
+            )
+
+            matches.extend(
+                [
+                    self._format_fixture(item)
+                    for item in data.get("response", [])
+                ]
+            )
+
+        # Sort matches by time
+        return sorted(matches, key=lambda x: x.get("date", ""))
