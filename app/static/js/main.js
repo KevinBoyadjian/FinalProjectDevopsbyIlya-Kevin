@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("Viewing history for: " + dateParam);
     } else {
         refreshAllLiveMatches();
-        setInterval(refreshAllLiveMatches, 30000);
+        setInterval(refreshAllLiveMatches, 60000);
     }
 
     const refreshButton = document.getElementById("refresh-btn");
