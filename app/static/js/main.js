@@ -80,19 +80,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
     const league = params.get("league");
 
-    // 1. Logic Switch: Standings for Leagues, Live for World Cup
+    // Clear any active intervals if they exist (prevents overwriting)
+    if (window.liveInterval) clearInterval(window.liveInterval);
+
     if (league && league !== "world-cup-2026") {
-        // If a specific league (like Premier League) is selected, show its final table
+        // Show Standings for European Leagues
         showFinalStandings(league);
     } else {
-        // Otherwise (Homepage or World Cup), show the Live World Cup matches
+        // Show Live Matches for World Cup / Home
         refreshAllLiveMatches();
-        
-        // Only auto-refresh if we are looking at live matches
-        setInterval(refreshAllLiveMatches, 30000);
+        // Save the interval to a variable so we can control it
+        window.liveInterval = setInterval(refreshAllLiveMatches, 30000);
     }
 
-    // 2. Keep the Refresh Button logic (it will work for whatever is on screen)
     const refreshButton = document.getElementById("refresh-btn");
     if (refreshButton) {
         refreshButton.addEventListener("click", () => {
