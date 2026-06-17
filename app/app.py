@@ -27,26 +27,21 @@ def index():
     mode = None
     available_dates = []
 
-    if league:
-        available_dates = football_service.get_available_dates(league)
-
-        if league == "world-cup-2026":
-            if not selected_date and available_dates:
-                selected_date = football_service.get_default_date(available_dates)
-
-            matches = football_service.get_matches_by_date(
-                league_key=league,
-                selected_date=selected_date,
-            )
-            mode = "date"
-        else:
-            if selected_date:
+    if league == "world-cup-2026":
+    # This will now fetch from your Pro API since we changed the 'source' to 'api-football'
+        matches = football_service.get_live_matches("world-cup-2026")
+        if not matches:
+            matches = football_service.get_upcoming_matches("world-cup-2026")
+        mode = "live"
+        
+    else:
+        if selected_date:
                 matches = football_service.get_matches_by_date(
                     league_key=league,
                     selected_date=selected_date,
                 )
                 mode = "date"
-            else:
+        else:
                 matches = football_service.get_live_matches(league)
                 mode = "live"
 
