@@ -79,18 +79,16 @@ async function refreshAllLiveMatches() {
 document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
     const league = params.get("league");
-
-    // Clear any active intervals if they exist (prevents overwriting)
-    if (window.liveInterval) clearInterval(window.liveInterval);
+    const dateParam = params.get("date");
 
     if (league && league !== "world-cup-2026") {
-        // Show Standings for European Leagues
         showFinalStandings(league);
+    } else if (dateParam) {
+        // Just let the HTML rendered by Python show the matches for that date
+        console.log("Viewing history for: " + dateParam);
     } else {
-        // Show Live Matches for World Cup / Home
         refreshAllLiveMatches();
-        // Save the interval to a variable so we can control it
-        window.liveInterval = setInterval(refreshAllLiveMatches, 30000);
+        setInterval(refreshAllLiveMatches, 30000);
     }
 
     const refreshButton = document.getElementById("refresh-btn");

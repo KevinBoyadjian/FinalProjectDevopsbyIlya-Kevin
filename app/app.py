@@ -20,34 +20,21 @@ def health_check():
 
 @app.route("/")
 def index():
-    league = request.args.get("league")
+    # 1. Get parameters. Default league is World Cup
+    league = request.args.get("league", "world-cup-2026")
     selected_date = request.args.get("date")
 
-    matches = []
-    mode = None
-    available_dates = []
-
-    if league == "world-cup-2026":
-    # This will now fetch from your Pro API since we changed the 'source' to 'api-football'
-        matches = football_service.get_live_matches("world-cup-2026")
-        if not matches:
-            matches = football_service.get_upcoming_matches("world-cup-2026")
-        mode = "live"
-        
+    # 2. Get the full list of tournament dates for the dropdown
+    available_dates = football_service.get_available_dates(league)
+    
+    if selected_date:
+        # If a user picked a date (e.g. June 11), get those specific finished matches
+        matches = football_service.get_matches_by_date(league, selected_date)
+        mode = "date"
     else:
-        if selected_date:
-                matches = football_service.get_matches_by_date(
-                    league_key=league,
-                    selected_date=selected_date,
-                )
-                mode = "date"
-        else:
-                matches = football_service.get_live_matches(league)
-                mode = "live"
-
-                if not matches:
-                    matches = football_service.get_upcoming_matches(league)
-                    mode = "upcoming"
+        # Default view: Show Live World Cup matches
+        matches = football_service.get_all_live_matches()
+        mode = "live"
 
     return render_template(
         "index.html",
@@ -57,6 +44,7 @@ def index():
         selected_date=selected_date,
         available_dates=available_dates,
     )
+
 
 
 @app.route("/match/<match_id>")
