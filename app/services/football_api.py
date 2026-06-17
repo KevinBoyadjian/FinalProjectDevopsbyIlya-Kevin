@@ -9,44 +9,44 @@ SUPPORTED_LEAGUES = {
     "premier-league": {
         "id": 39,
         "name": "Premier League",
-        "season": "2025",
+        "season": "2026",
         "source": "api-football",
     },
     "la-liga": {
         "id": 140,
         "name": "La Liga",
-        "season": "2025",
+        "season": "2026",
         "source": "api-football",
     },
     "serie-a": {
         "id": 135,
         "name": "Serie A",
-        "season": "2025",
+        "season": "2026",
         "source": "api-football",
     },
     "ligue-1": {
         "id": 61,
         "name": "Ligue 1",
-        "season": "2025",
+        "season": "2026",
         "source": "api-football",
     },
     "bundesliga": {
         "id": 78,
         "name": "Bundesliga",
-        "season": "2025",
+        "season": "2026",
         "source": "api-football",
     },
     "champions-league": {
         "id": 2,
         "name": "Champions League",
-        "season": "2025",
+        "season": "2026",
         "source": "api-football",
     },
     "world-cup-2026": {
         "id": 1,
         "name": "FIFA World Cup 2026",
         "season": "2026",
-        "source": "local-json",
+        "source": "api-football",
     },
 }
 

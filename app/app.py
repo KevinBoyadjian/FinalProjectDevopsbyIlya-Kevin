@@ -116,6 +116,13 @@ def api_live():
         "matches": matches,
     })
 
+@app.route("/api/standings/<league_key>")
+def api_standings(league_key):
+    """Fetch the final league table from the service."""
+    standings = football_service.get_standings(league_key)
+    return jsonify(standings)
+
+
 
 if __name__ == "__main__":
     # We set debug=False for security.
