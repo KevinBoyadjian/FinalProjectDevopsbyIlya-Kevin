@@ -1,9 +1,12 @@
+/**
+ * main.js - Optimized for World Cup 2026 Pro API
+ */
+
 async function refreshAllLiveMatches() {
     const container = document.getElementById("matches-container");
     if (!container) return;
 
     try {
-        // Call the NEW endpoint that shows ALL competitions
         const response = await fetch(`/api/live/all`);
 
         if (response.status === 429) {
@@ -11,7 +14,7 @@ async function refreshAllLiveMatches() {
                 <div class="empty-state">
                     <div class="empty-icon">⏳</div>
                     <h3>API limit reached</h3>
-                    <p>Too many requests. Please wait a moment.</p>
+                    <p>Our Pro API is currently throttled. Please try again in a minute.</p>
                 </div>
             `;
             return;
@@ -25,7 +28,7 @@ async function refreshAllLiveMatches() {
                 <div class="empty-state">
                     <div class="empty-icon">⚽</div>
                     <h3>No live matches right now</h3>
-                    <p>All 900+ competitions covered. Check back soon!</p>
+                    <p>Check the tournament schedule for upcoming games.</p>
                 </div>
             `;
             return;
@@ -35,12 +38,15 @@ async function refreshAllLiveMatches() {
 
         matches.forEach(match => {
             const card = document.createElement("article");
-            card.className = "match-card";
+            card.className = `match-card ${match.status === 'FT' ? 'finished' : 'live'}`;
+
+            // Check if match is live to add a badge
+            const isLive = ['1H', '2H', 'HT', 'ET', 'P'].includes(match.status);
 
             card.innerHTML = `
                 <div class="match-status">
-                    <span class="live-badge">${match.status}</span>
-                    <span class="minute">${match.minute || 0}'</span>
+                    <span class="live-badge ${isLive ? 'pulsing' : ''}">${match.status}</span>
+                    <span class="minute">${isLive ? match.minute + "'" : ''}</span>
                 </div>
 
                 <div class="teams">
@@ -57,7 +63,7 @@ async function refreshAllLiveMatches() {
                 <p class="match-league">${match.league}</p>
 
                 <div class="card-footer">
-                    <a class="details-link" href="/match/${match.id}">Match details</a>
+                    <a class="details-link" href="/match/${match.id}">Match stats</a>
                 </div>
             `;
 
@@ -68,88 +74,107 @@ async function refreshAllLiveMatches() {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">✖</div>
-                <h3>Failed to load matches</h3>
-                <p>Please try again later.</p>
+                <h3>Connection Error</h3>
+                <p>Unable to reach the live score server.</p>
             </div>
         `;
-        console.error(error);
+        console.error("Live Fetch Error:", error);
     }
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-    const params = new URLSearchParams(window.location.search);
-    const league = params.get("league");
-    const dateParam = params.get("date");
-
-    if (league && league !== "world-cup-2026") {
-        showFinalStandings(league);
-    } else if (dateParam) {
-        // Just let the HTML rendered by Python show the matches for that date
-        console.log("Viewing history for: " + dateParam);
-    } else {
-        refreshAllLiveMatches();
-        setInterval(refreshAllLiveMatches, 60000);
-    }
-
-    const refreshButton = document.getElementById("refresh-btn");
-    if (refreshButton) {
-        refreshButton.addEventListener("click", () => {
-            if (league && league !== "world-cup-2026") {
-                showFinalStandings(league);
-            } else {
-                refreshAllLiveMatches();
-            }
-        });
-    }
-});
-
 
 async function showFinalStandings(leagueKey) {
     const container = document.getElementById("matches-container");
     if (!container) return;
     
-    container.innerHTML = "<div class='loading'>Loading Final Standings...</div>";
+    container.innerHTML = "<div class='loading'>Calculating Final Standings...</div>";
 
     try {
         const response = await fetch(`/api/standings/${leagueKey}`);
         const standings = await response.json();
 
-        if (!standings.length) {
-            container.innerHTML = "<p>Standings not available for this league.</p>";
+        if (!standings || !standings.length) {
+            container.innerHTML = "<div class='empty-state'>Standings currently unavailable for this league.</div>";
             return;
         }
 
         let html = `
             <div class="standings-header">
                 <h2>${leagueKey.replace(/-/g, ' ').toUpperCase()}</h2>
-                <p class="off-season-note">🏆 Season Finished. Focus moved to World Cup 2026.</p>
+                <p class="off-season-note">🏆 2025/26 Season Finished</p>
             </div>
-            <table class="standings-table">
-                <thead>
-                    <tr>
-                        <th>Pos</th>
-                        <th>Team</th>
-                        <th>Pts</th>
-                    </tr>
-                </thead>
-                <tbody>
+            <div class="table-responsive">
+                <table class="standings-table">
+                    <thead>
+                        <tr>
+                            <th>Pos</th>
+                            <th>Team</th>
+                            <th>Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
 
         standings.forEach(row => {
             html += `
                 <tr class="${row.position <= 4 ? 'ucl-spot' : ''}">
                     <td>${row.position}</td>
-                    <td>${row.team}</td>
-                    <td><strong>${row.points}</strong></td>
+                    <td><strong>${row.team}</strong></td>
+                    <td>${row.points}</td>
                 </tr>
             `;
         });
 
-        html += `</tbody></table>`;
+        html += `</tbody></table></div>`;
         container.innerHTML = html;
 
     } catch (error) {
-        container.innerHTML = "<p>Error loading standings. Please try again.</p>";
-        console.error("Error:", error);
+        container.innerHTML = "<p>Error loading standings.</p>";
+        console.error("Standings Fetch Error:", error);
     }
 }
+
+/**
+ * Page Logic Initialization
+ */
+document.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(window.location.search);
+    const league = params.get("league");
+    const dateParam = params.get("date");
+
+    // 1. ROUTING LOGIC
+    if (league && league !== "world-cup-2026") {
+        // Mode: OFF-SEASON STANDINGS
+        showFinalStandings(league);
+    } 
+    else if (dateParam) {
+        // Mode: HISTORICAL DATA
+        // We do nothing here because the Python backend (app.py) 
+        // already rendered the correct matches into the HTML.
+        console.log("Showing matches for: " + dateParam);
+    } 
+    else {
+        // Mode: LIVE WORLD CUP
+        refreshAllLiveMatches();
+        // Update live scores every 60 seconds (Matches server cache)
+        setInterval(refreshAllLiveMatches, 60000);
+    }
+
+    // 2. REFRESH BUTTON LOGIC
+    const refreshButton = document.getElementById("refresh-btn");
+    if (refreshButton) {
+        refreshButton.addEventListener("click", () => {
+            const currentParams = new URLSearchParams(window.location.search);
+            const currentLeague = currentParams.get("league");
+            const currentDate = currentParams.get("date");
+
+            if (currentLeague && currentLeague !== "world-cup-2026") {
+                showFinalStandings(currentLeague);
+            } else if (currentDate) {
+                // If on a specific date, reload the whole page to get fresh server data
+                window.location.reload();
+            } else {
+                refreshAllLiveMatches();
+            }
+        });
+    }
+});
