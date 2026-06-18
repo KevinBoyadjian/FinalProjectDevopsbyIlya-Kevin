@@ -141,25 +141,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const league = params.get("league");
     const dateParam = params.get("date");
 
-    // 1. ROUTING LOGIC
+    // 1. If looking at a European League -> Show Standings
     if (league && league !== "world-cup-2026") {
-        // Mode: OFF-SEASON STANDINGS
         showFinalStandings(league);
     } 
+    // 2. FIX THE LOADING HANG: If looking at a specific date, DO NOT refresh live scores
     else if (dateParam) {
-        // Mode: HISTORICAL DATA
-        // We do nothing here because the Python backend (app.py) 
-        // already rendered the correct matches into the HTML.
-        console.log("Showing matches for: " + dateParam);
+        console.log("Historical Mode: Staying on date " + dateParam);
+        // We do nothing here. This allows the matches Python already 
+        // put in the HTML to stay visible.
     } 
+    // 3. Homepage / Live World Cup -> Refresh every 60 seconds
     else {
-        // Mode: LIVE WORLD CUP
         refreshAllLiveMatches();
-        // Update live scores every 60 seconds (Matches server cache)
         setInterval(refreshAllLiveMatches, 60000);
     }
 
-    // 2. REFRESH BUTTON LOGIC
+
+    // 4. REFRESH BUTTON LOGIC
     const refreshButton = document.getElementById("refresh-btn");
     if (refreshButton) {
         refreshButton.addEventListener("click", () => {

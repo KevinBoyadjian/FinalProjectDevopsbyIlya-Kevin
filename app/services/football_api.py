@@ -86,8 +86,30 @@ class FootballAPIService:
         table = response[0]["league"]["standings"][0]
         return [{"position": t["rank"], "team": t["team"]["name"], "points": t["points"]} for t in table]
 
-    def get_matches_by_date(self, league_key, selected_date):
-        league_id = SUPPORTED_LEAGUES[league_key]["id"]
-        season = SUPPORTED_LEAGUES[league_key]["season"]
-        data = self._get("fixtures", {"league": league_id, "season": season, "date": selected_date})
+    def get_matches_by_date(self, league_key=None, selected_date=None):
+        # 1. Safety: If no date, use today
+        if not selected_date:
+            selected_date = date.today().isoformat()
+        
+        # 2. FIX THE 500 ERROR: If league_key is missing (None), default to World Cup
+        if not league_key:
+            league_key = "world-cup-2026"
+
+        # 3. Final check to ensure the league exists in our list
+        if league_key not in SUPPORTED_LEAGUES:
+            print(f"DEBUG: League {league_key} not found, defaulting to World Cup")
+            league_key = "world-cup-2026"
+
+        league_info = SUPPORTED_LEAGUES[league_key]
+        league_id = league_info["id"]
+        season = league_info["season"]
+
+        # 4. Fetch from API
+        data = self._get("fixtures", {
+            "league": league_id, 
+            "season": season, 
+            "date": selected_date
+        })
+        
         return [self._format_fixture(item) for item in data.get("response", [])]
+
