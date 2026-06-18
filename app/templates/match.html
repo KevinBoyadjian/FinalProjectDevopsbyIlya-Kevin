@@ -10,7 +10,10 @@
 <body class="dark-body">
   <main class="app-shell match-page">
     <header class="topbar">
-       <a class="back-link" href="{{ url_for('index', league=selected_league, date=selected_date) if selected_league else url_for('index') }}">
+      <a
+        class="back-link"
+        href="{{ url_for('index', league=selected_league, date=selected_date) if selected_league else url_for('index') }}"
+      >
         ← Back to scores
       </a>
     </header>
@@ -18,28 +21,35 @@
     <section class="match-details-card">
       <div class="score-display">
         <h1>
-          {{ match.home_team }} 
+          {{ match.home_team }}
           {{ match.home_score if match.home_score is not none else '' }}
-          - 
-          {{ match.away_score if match.away_score is not none else '' }} 
+          -
+          {{ match.away_score if match.away_score is not none else '' }}
           {{ match.away_team }}
         </h1>
       </div>
 
       <div class="match-info-grid">
-        <p><strong>Status:</strong> 
-          {% if match.status == "NS" %} Not started
-          {% elif match.status == "FT" %} Finished
-          {% elif match.status == "HT" %} Half Time
-          {% else %} {{ match.status }}
+        <p>
+          <strong>Status:</strong>
+          {% if match.status == "NS" %}
+            Not started
+          {% elif match.status == "FT" %}
+            Finished
+          {% elif match.status == "HT" %}
+            Half Time
+          {% else %}
+            {{ match.status }}
           {% endif %}
         </p>
-        
+
         {% if match.minute %}
           <p><strong>Minute:</strong> {{ match.minute }}'</p>
         {% endif %}
 
-        <p><strong>Date:</strong> {{ match.date[:10] }} ({{ match.date[11:16] }} UTC)</p>
+        {% if match.date %}
+          <p><strong>Date:</strong> {{ match.date[:10] }} ({{ match.date[11:16] }} UTC)</p>
+        {% endif %}
 
         {% if match.stadium %}
           <p><strong>Venue:</strong> {{ match.stadium }}, {{ match.city }}</p>
@@ -47,16 +57,32 @@
       </div>
     </section>
 
-    <!-- EVENTS SECTION (Goals, Cards, Subs) -->
     <section class="events-card">
       <h2>Match Timeline</h2>
-      {% if match.events %}
+
+      {% set events = match.events | default([]) %}
+
+      {% if events %}
         <ul class="clean-list">
-          {% for event in match.events %}
+          {% for event in events %}
             <li class="event-item">
-              <span class="event-min">{{ event.minute }}'</span>
-              <span class="event-type">[{{ event.type }}]</span>
-              <strong>{{ event.player }}</strong> ({{ event.team }})
+              <span class="event-min">
+                {% if event.minute %}
+                  {{ event.minute }}'
+                {% else %}
+                  -
+                {% endif %}
+              </span>
+
+              <span class="event-type">
+                [{{ event.type | default('Event') }}]
+              </span>
+
+              <strong>{{ event.player | default('Unknown player') }}</strong>
+
+              {% if event.team %}
+                ({{ event.team }})
+              {% endif %}
             </li>
           {% endfor %}
         </ul>
@@ -65,26 +91,41 @@
       {% endif %}
     </section>
 
-    <!-- LINEUPS SECTION -->
     <section class="lineups-card">
       <h2>Lineups</h2>
-      {% if match.lineups and (match.lineups.home or match.lineups.away) %}
+
+      {% set lineups = match.lineups | default({'home': [], 'away': []}) %}
+      {% set home_lineup = lineups.home | default([]) %}
+      {% set away_lineup = lineups.away | default([]) %}
+
+      {% if home_lineup or away_lineup %}
         <div class="lineups-grid">
           <div class="lineup-column">
             <h3>{{ match.home_team }}</h3>
-            <ul class="clean-list">
-              {% for player in match.lineups.home %}
-                <li>{{ player }}</li>
-              {% endfor %}
-            </ul>
+
+            {% if home_lineup %}
+              <ul class="clean-list">
+                {% for player in home_lineup %}
+                  <li>{{ player }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="empty-note">No lineup yet.</p>
+            {% endif %}
           </div>
+
           <div class="lineup-column">
             <h3>{{ match.away_team }}</h3>
-            <ul class="clean-list">
-              {% for player in match.lineups.away %}
-                <li>{{ player }}</li>
-              {% endfor %}
-            </ul>
+
+            {% if away_lineup %}
+              <ul class="clean-list">
+                {% for player in away_lineup %}
+                  <li>{{ player }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="empty-note">No lineup yet.</p>
+            {% endif %}
           </div>
         </div>
       {% else %}

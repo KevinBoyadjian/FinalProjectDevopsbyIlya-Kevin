@@ -18,7 +18,6 @@
         </div>
       </div>
 
-      <!-- ADDED ID="refresh-btn" so JavaScript can listen to clicks -->
       <a
         id="refresh-btn"
         class="refresh-btn"
@@ -32,21 +31,27 @@
       <a class="league-tab {% if not selected_league or selected_league == 'world-cup-2026' %}active{% endif %}" href="/">
         FIFA World Cup 2026
       </a>
+
       <a class="league-tab {% if selected_league == 'premier-league' %}active{% endif %}" href="/?league=premier-league">
         Premier League
       </a>
+
       <a class="league-tab {% if selected_league == 'la-liga' %}active{% endif %}" href="/?league=la-liga">
         La Liga
       </a>
+
       <a class="league-tab {% if selected_league == 'serie-a' %}active{% endif %}" href="/?league=serie-a">
         Serie A
       </a>
+
       <a class="league-tab {% if selected_league == 'ligue-1' %}active{% endif %}" href="/?league=ligue-1">
         Ligue 1
       </a>
+
       <a class="league-tab {% if selected_league == 'bundesliga' %}active{% endif %}" href="/?league=bundesliga">
         Bundesliga
       </a>
+
       <a class="league-tab {% if selected_league == 'champions-league' %}active{% endif %}" href="/?league=champions-league">
         Champions League
       </a>
@@ -59,14 +64,13 @@
             class="date-tab {% if selected_date == match_date %}active{% endif %}"
             href="{{ url_for('index', league=selected_league, date=match_date) }}"
           >
-            {{ match_date[5:] }} <!-- Shows MM-DD for cleaner look -->
+            {{ match_date[5:] }}
           </a>
         {% endfor %}
       </nav>
     {% endif %}
 
     <section class="content">
-      <!-- HERO PANEL: Changes text based on what we are looking at -->
       <section class="hero-panel">
         <div>
           {% if selected_league and selected_league != 'world-cup-2026' %}
@@ -79,32 +83,45 @@
         </div>
       </section>
 
-      <!-- ADDED ID="matches-container" - THIS IS CRUCIAL FOR main.js -->
       <section id="matches-container" class="matches-grid">
-        
-        <!-- Server-side initial render (Good for SEO and fast loading) -->
         {% if matches %}
           {% for match in matches %}
             <article class="match-card">
               <div class="match-status">
                 <span class="live-badge">{{ match.status }}</span>
-                <span class="minute">{% if match.minute %}{{ match.minute }}'{% endif %}</span>
+
+                <span class="minute">
+                  {% if match.minute %}
+                    {{ match.minute }}'
+                  {% endif %}
+                </span>
               </div>
 
               <div class="teams">
                 <div class="team-row">
                   <span class="team-name">{{ match.home_team }}</span>
-                  <span class="team-score">{{ match.home_score if match.home_score is not none else 0 }}</span>
+                  <span class="team-score">
+                    {{ match.home_score if match.home_score is not none else 0 }}
+                  </span>
                 </div>
+
                 <div class="team-row">
                   <span class="team-name">{{ match.away_team }}</span>
-                  <span class="team-score">{{ match.away_score if match.away_score is not none else 0 }}</span>
+                  <span class="team-score">
+                    {{ match.away_score if match.away_score is not none else 0 }}
+                  </span>
                 </div>
               </div>
 
               <div class="card-footer">
                 <p class="competition-name">{{ match.league }}</p>
-                <a class="details-link" href="/match/{{ match.id }}">Match details</a>
+
+                <a
+                  class="details-link"
+                  href="{{ url_for('match_details', match_id=match.id, league=selected_league, date=selected_date) }}"
+                >
+                  Match details
+                </a>
               </div>
             </article>
           {% endfor %}
@@ -118,7 +135,6 @@
     </section>
   </main>
 
-  <!-- IMPORTANT: Load JavaScript at the end -->
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
