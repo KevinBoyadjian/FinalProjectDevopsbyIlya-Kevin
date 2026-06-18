@@ -3,126 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Top5Score - Match Details</title>
+  <title>Top5Score - {{ match.home_team }} vs {{ match.away_team }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
 
 <body class="dark-body">
   <main class="app-shell match-page">
-    <a
-      class="back-link"
-      href="{{ url_for('index', league=selected_league, date=selected_date) if selected_league else url_for('index') }}"
-    >
-      ← Back to live scores
-    </a>
+    <header class="topbar">
+       <a class="back-link" href="{{ url_for('index', league=selected_league, date=selected_date) if selected_league else url_for('index') }}">
+        ← Back to scores
+      </a>
+    </header>
 
     <section class="match-details-card">
-      {% if match.home_score is not none and match.away_score is not none %}
+      <div class="score-display">
         <h1>
-          {{ match.home_team }}
-          {{ match.home_score }}
-          -
-          {{ match.away_score }}
+          {{ match.home_team }} 
+          {{ match.home_score if match.home_score is not none else '' }}
+          - 
+          {{ match.away_score if match.away_score is not none else '' }} 
           {{ match.away_team }}
         </h1>
-      {% else %}
-        <h1>{{ match.home_team }} vs {{ match.away_team }}</h1>
-      {% endif %}
+      </div>
 
-      <p>
-        <strong>Status:</strong>
-        {% if match.status == "NS" %}
-          Not started
-        {% elif match.status == "FT" %}
-          Full time
-        {% elif match.status == "HT" %}
-          Half time
-        {% else %}
-          {{ match.status }}
+      <div class="match-info-grid">
+        <p><strong>Status:</strong> 
+          {% if match.status == "NS" %} Not started
+          {% elif match.status == "FT" %} Finished
+          {% elif match.status == "HT" %} Half Time
+          {% else %} {{ match.status }}
+          {% endif %}
+        </p>
+        
+        {% if match.minute %}
+          <p><strong>Minute:</strong> {{ match.minute }}'</p>
         {% endif %}
-      </p>
 
-      {% if match.minute %}
-        <p><strong>Minute:</strong> {{ match.minute }}'</p>
-      {% endif %}
+        <p><strong>Date:</strong> {{ match.date[:10] }} ({{ match.date[11:16] }} UTC)</p>
 
-      {% if match.date_jerusalem %}
-        <p><strong>Kick-off:</strong> {{ match.date_jerusalem }} Jerusalem time</p>
-      {% elif match.date %}
-        <p><strong>Kick-off:</strong> {{ match.date }}</p>
-      {% endif %}
-
-      {% if match.stage %}
-        <p><strong>Stage:</strong> {{ match.stage }}</p>
-      {% endif %}
-
-      {% if match.group %}
-        <p><strong>Group:</strong> {{ match.group }}</p>
-      {% endif %}
-
-      {% if match.stadium %}
-        <p><strong>Stadium:</strong> {{ match.stadium }}</p>
-      {% endif %}
-
-      {% if match.city %}
-        <p><strong>City:</strong> {{ match.city }}</p>
-      {% endif %}
+        {% if match.stadium %}
+          <p><strong>Venue:</strong> {{ match.stadium }}, {{ match.city }}</p>
+        {% endif %}
+      </div>
     </section>
 
+    <!-- EVENTS SECTION (Goals, Cards, Subs) -->
     <section class="events-card">
-      <h2>Events</h2>
-
+      <h2>Match Timeline</h2>
       {% if match.events %}
         <ul class="clean-list">
           {% for event in match.events %}
-            <li>
-              {{ event.minute }}' -
-              {{ event.team }} -
-              {{ event.type }} -
-              {{ event.player }}
+            <li class="event-item">
+              <span class="event-min">{{ event.minute }}'</span>
+              <span class="event-type">[{{ event.type }}]</span>
+              <strong>{{ event.player }}</strong> ({{ event.team }})
             </li>
           {% endfor %}
         </ul>
       {% else %}
-        <p>No events available yet. Events will appear after the match starts.</p>
+        <p class="empty-note">Timeline will update once the match begins.</p>
       {% endif %}
     </section>
 
+    <!-- LINEUPS SECTION -->
     <section class="lineups-card">
       <h2>Lineups</h2>
-
-      {% if match.lineups.home or match.lineups.away %}
+      {% if match.lineups and (match.lineups.home or match.lineups.away) %}
         <div class="lineups-grid">
-          <div>
-            <h3>Home</h3>
-
-            {% if match.lineups.home %}
-              <ul class="clean-list">
-                {% for player in match.lineups.home %}
-                  <li>{{ player }}</li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p>No home lineup available yet.</p>
-            {% endif %}
+          <div class="lineup-column">
+            <h3>{{ match.home_team }}</h3>
+            <ul class="clean-list">
+              {% for player in match.lineups.home %}
+                <li>{{ player }}</li>
+              {% endfor %}
+            </ul>
           </div>
-
-          <div>
-            <h3>Away</h3>
-
-            {% if match.lineups.away %}
-              <ul class="clean-list">
-                {% for player in match.lineups.away %}
-                  <li>{{ player }}</li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p>No away lineup available yet.</p>
-            {% endif %}
+          <div class="lineup-column">
+            <h3>{{ match.away_team }}</h3>
+            <ul class="clean-list">
+              {% for player in match.lineups.away %}
+                <li>{{ player }}</li>
+              {% endfor %}
+            </ul>
           </div>
         </div>
       {% else %}
-        <p>Lineups are not available yet. They are usually published closer to kick-off.</p>
+        <p class="empty-note">Lineups are usually available 60 minutes before kick-off.</p>
       {% endif %}
     </section>
   </main>
