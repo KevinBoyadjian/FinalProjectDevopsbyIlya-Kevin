@@ -18,13 +18,7 @@
         </div>
       </div>
 
-      <a
-        id="refresh-btn"
-        class="refresh-btn"
-        href="#"
-      >
-        Refresh
-      </a>
+      <a id="refresh-btn" class="refresh-btn" href="#">Refresh</a>
     </header>
 
     <nav class="league-tabs">
@@ -75,7 +69,14 @@
         <div>
           {% if selected_league and selected_league != 'world-cup-2026' %}
             <h2>{{ selected_league.replace('-', ' ').upper() }}</h2>
-            <p>Final Standings - 2025/26 Season</p>
+
+            {% if mode == "live" %}
+              <p>Live matches</p>
+            {% elif mode == "upcoming" %}
+              <p>No live match right now. Showing upcoming matches.</p>
+            {% else %}
+              <p>Football scores and fixtures</p>
+            {% endif %}
           {% else %}
             <h2>World Cup 2026</h2>
             <p>Live Scores and Tournament Schedule</p>
@@ -128,7 +129,8 @@
         {% else %}
           <div class="empty-state">
             <div class="empty-icon">⚽</div>
-            <h3>Loading matches...</h3>
+            <h3>No matches found</h3>
+            <p>Try another league, another date, or refresh later.</p>
           </div>
         {% endif %}
       </section>

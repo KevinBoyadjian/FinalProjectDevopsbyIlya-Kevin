@@ -21,11 +21,21 @@
     <section class="match-details-card">
       <div class="score-display">
         <h1>
+          {% if match.home_logo %}
+            <img src="{{ match.home_logo }}" alt="{{ match.home_team }}" style="height: 32px; vertical-align: middle;" />
+          {% endif %}
+
           {{ match.home_team }}
+
           {{ match.home_score if match.home_score is not none else '' }}
           -
           {{ match.away_score if match.away_score is not none else '' }}
+
           {{ match.away_team }}
+
+          {% if match.away_logo %}
+            <img src="{{ match.away_logo }}" alt="{{ match.away_team }}" style="height: 32px; vertical-align: middle;" />
+          {% endif %}
         </h1>
       </div>
 
@@ -39,7 +49,7 @@
           {% elif match.status == "HT" %}
             Half Time
           {% else %}
-            {{ match.status }}
+            {{ match.status_long or match.status }}
           {% endif %}
         </p>
 
@@ -48,13 +58,65 @@
         {% endif %}
 
         {% if match.date %}
-          <p><strong>Date:</strong> {{ match.date[:10] }} ({{ match.date[11:16] }} UTC)</p>
+          <p><strong>Date:</strong> {{ match.date[:10] }} at {{ match.date[11:16] }} UTC</p>
+        {% endif %}
+
+        {% if match.league %}
+          <p><strong>Competition:</strong> {{ match.league }}</p>
+        {% endif %}
+
+        {% if match.stage %}
+          <p><strong>Stage:</strong> {{ match.stage }}</p>
+        {% endif %}
+
+        {% if match.referee %}
+          <p><strong>Referee:</strong> {{ match.referee }}</p>
         {% endif %}
 
         {% if match.stadium %}
-          <p><strong>Venue:</strong> {{ match.stadium }}, {{ match.city }}</p>
+          <p><strong>Venue:</strong> {{ match.stadium }}{% if match.city %}, {{ match.city }}{% endif %}</p>
         {% endif %}
       </div>
+
+      {% if match.score %}
+        <div class="match-info-grid">
+          {% if match.score.halftime.home is not none or match.score.halftime.away is not none %}
+            <p>
+              <strong>Half-time:</strong>
+              {{ match.score.halftime.home if match.score.halftime.home is not none else '-' }}
+              -
+              {{ match.score.halftime.away if match.score.halftime.away is not none else '-' }}
+            </p>
+          {% endif %}
+
+          {% if match.score.fulltime.home is not none or match.score.fulltime.away is not none %}
+            <p>
+              <strong>Full-time:</strong>
+              {{ match.score.fulltime.home if match.score.fulltime.home is not none else '-' }}
+              -
+              {{ match.score.fulltime.away if match.score.fulltime.away is not none else '-' }}
+            </p>
+          {% endif %}
+
+          {% if match.score.extratime.home is not none or match.score.extratime.away is not none %}
+            <p>
+              <strong>Extra-time:</strong>
+              {{ match.score.extratime.home if match.score.extratime.home is not none else '-' }}
+              -
+              {{ match.score.extratime.away if match.score.extratime.away is not none else '-' }}
+            </p>
+          {% endif %}
+
+          {% if match.score.penalty.home is not none or match.score.penalty.away is not none %}
+            <p>
+              <strong>Penalties:</strong>
+              {{ match.score.penalty.home if match.score.penalty.home is not none else '-' }}
+              -
+              {{ match.score.penalty.away if match.score.penalty.away is not none else '-' }}
+            </p>
+          {% endif %}
+        </div>
+      {% endif %}
     </section>
 
     <section class="events-card">
@@ -68,20 +130,26 @@
             <li class="event-item">
               <span class="event-min">
                 {% if event.minute %}
-                  {{ event.minute }}'
+                  {{ event.minute }}'{% if event.extra_minute %}+{{ event.extra_minute }}{% endif %}
                 {% else %}
                   -
                 {% endif %}
               </span>
 
-              <span class="event-type">
-                [{{ event.type | default('Event') }}]
-              </span>
+              <span class="event-type">[{{ event.type or 'Event' }}]</span>
 
-              <strong>{{ event.player | default('Unknown player') }}</strong>
+              <strong>{{ event.player or 'Unknown player' }}</strong>
+
+              {% if event.assist %}
+                assisted by {{ event.assist }}
+              {% endif %}
 
               {% if event.team %}
                 ({{ event.team }})
+              {% endif %}
+
+              {% if event.detail %}
+                - {{ event.detail }}
               {% endif %}
             </li>
           {% endfor %}
@@ -91,45 +159,193 @@
       {% endif %}
     </section>
 
-    <section class="lineups-card">
-      <h2>Lineups</h2>
+    <section class="statistics-card">
+      <h2>Match Statistics</h2>
 
-      {% set lineups = match.lineups | default({'home': [], 'away': []}) %}
-      {% set home_lineup = lineups.home | default([]) %}
-      {% set away_lineup = lineups.away | default([]) %}
+      {% set home_stats = match.statistics.home | default([]) %}
+      {% set away_stats = match.statistics.away | default([]) %}
 
-      {% if home_lineup or away_lineup %}
+      {% if home_stats or away_stats %}
         <div class="lineups-grid">
           <div class="lineup-column">
             <h3>{{ match.home_team }}</h3>
-
-            {% if home_lineup %}
-              <ul class="clean-list">
-                {% for player in home_lineup %}
-                  <li>{{ player }}</li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p class="empty-note">No lineup yet.</p>
-            {% endif %}
+            <ul class="clean-list">
+              {% for stat in home_stats %}
+                <li>
+                  <strong>{{ stat.type }}:</strong>
+                  {{ stat.value if stat.value is not none else '-' }}
+                </li>
+              {% endfor %}
+            </ul>
           </div>
 
           <div class="lineup-column">
             <h3>{{ match.away_team }}</h3>
+            <ul class="clean-list">
+              {% for stat in away_stats %}
+                <li>
+                  <strong>{{ stat.type }}:</strong>
+                  {{ stat.value if stat.value is not none else '-' }}
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      {% else %}
+        <p class="empty-note">Statistics will update once available.</p>
+      {% endif %}
+    </section>
+
+    <section class="lineups-card">
+      <h2>Lineups</h2>
+
+      {% set home_lineup = match.lineups.home | default([]) %}
+      {% set away_lineup = match.lineups.away | default([]) %}
+
+      {% if home_lineup or away_lineup %}
+        <div class="lineups-grid">
+          <div class="lineup-column">
+            <h3>
+              {{ match.home_team }}
+              {% if match.formations.home %} - {{ match.formations.home }}{% endif %}
+            </h3>
+
+            {% if match.coaches.home %}
+              <p><strong>Coach:</strong> {{ match.coaches.home }}</p>
+            {% endif %}
+
+            {% if home_lineup %}
+              <ul class="clean-list">
+                {% for player in home_lineup %}
+                  <li>
+                    {% if player.number %}#{{ player.number }}{% endif %}
+                    {{ player.name }}
+                    {% if player.position %} - {{ player.position }}{% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="empty-note">No home lineup available yet.</p>
+            {% endif %}
+          </div>
+
+          <div class="lineup-column">
+            <h3>
+              {{ match.away_team }}
+              {% if match.formations.away %} - {{ match.formations.away }}{% endif %}
+            </h3>
+
+            {% if match.coaches.away %}
+              <p><strong>Coach:</strong> {{ match.coaches.away }}</p>
+            {% endif %}
 
             {% if away_lineup %}
               <ul class="clean-list">
                 {% for player in away_lineup %}
-                  <li>{{ player }}</li>
+                  <li>
+                    {% if player.number %}#{{ player.number }}{% endif %}
+                    {{ player.name }}
+                    {% if player.position %} - {{ player.position }}{% endif %}
+                  </li>
                 {% endfor %}
               </ul>
             {% else %}
-              <p class="empty-note">No lineup yet.</p>
+              <p class="empty-note">No away lineup available yet.</p>
             {% endif %}
           </div>
         </div>
       {% else %}
         <p class="empty-note">Lineups are usually available 60 minutes before kick-off.</p>
+      {% endif %}
+    </section>
+
+    <section class="lineups-card">
+      <h2>Substitutes</h2>
+
+      {% set home_subs = match.substitutes.home | default([]) %}
+      {% set away_subs = match.substitutes.away | default([]) %}
+
+      {% if home_subs or away_subs %}
+        <div class="lineups-grid">
+          <div class="lineup-column">
+            <h3>{{ match.home_team }}</h3>
+            <ul class="clean-list">
+              {% for player in home_subs %}
+                <li>
+                  {% if player.number %}#{{ player.number }}{% endif %}
+                  {{ player.name }}
+                  {% if player.position %} - {{ player.position }}{% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <div class="lineup-column">
+            <h3>{{ match.away_team }}</h3>
+            <ul class="clean-list">
+              {% for player in away_subs %}
+                <li>
+                  {% if player.number %}#{{ player.number }}{% endif %}
+                  {{ player.name }}
+                  {% if player.position %} - {{ player.position }}{% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      {% else %}
+        <p class="empty-note">Substitutes are not available yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="statistics-card">
+      <h2>Player Statistics</h2>
+
+      {% set home_players = match.players.home | default([]) %}
+      {% set away_players = match.players.away | default([]) %}
+
+      {% if home_players or away_players %}
+        <div class="lineups-grid">
+          <div class="lineup-column">
+            <h3>{{ match.home_team }}</h3>
+
+            <ul class="clean-list">
+              {% for player in home_players %}
+                <li>
+                  <strong>{{ player.name }}</strong>
+                  {% if player.position %} - {{ player.position }}{% endif %}
+                  {% if player.minutes %} - {{ player.minutes }} min{% endif %}
+                  {% if player.rating %} - Rating: {{ player.rating }}{% endif %}
+                  {% if player.goals %} - Goals: {{ player.goals }}{% endif %}
+                  {% if player.assists %} - Assists: {{ player.assists }}{% endif %}
+                  {% if player.yellow_cards %} - Yellow: {{ player.yellow_cards }}{% endif %}
+                  {% if player.red_cards %} - Red: {{ player.red_cards }}{% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <div class="lineup-column">
+            <h3>{{ match.away_team }}</h3>
+
+            <ul class="clean-list">
+              {% for player in away_players %}
+                <li>
+                  <strong>{{ player.name }}</strong>
+                  {% if player.position %} - {{ player.position }}{% endif %}
+                  {% if player.minutes %} - {{ player.minutes }} min{% endif %}
+                  {% if player.rating %} - Rating: {{ player.rating }}{% endif %}
+                  {% if player.goals %} - Goals: {{ player.goals }}{% endif %}
+                  {% if player.assists %} - Assists: {{ player.assists }}{% endif %}
+                  {% if player.yellow_cards %} - Yellow: {{ player.yellow_cards }}{% endif %}
+                  {% if player.red_cards %} - Red: {{ player.red_cards }}{% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      {% else %}
+        <p class="empty-note">Player statistics will update once available.</p>
       {% endif %}
     </section>
   </main>

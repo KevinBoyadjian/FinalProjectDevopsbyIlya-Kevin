@@ -48,19 +48,38 @@ class FootballAPIService:
             return {"response": []}
 
     def _format_fixture(self, item):
+        fixture = item.get("fixture", {})
+        league = item.get("league", {})
+        teams = item.get("teams", {})
+        goals = item.get("goals", {})
+        venue = fixture.get("venue", {})
+        status = fixture.get("status", {})
+
         return {
-            "id": item["fixture"]["id"],
-            "league": item["league"]["name"],
-            "home_team": item["teams"]["home"]["name"],
-            "away_team": item["teams"]["away"]["name"],
-            "home_score": item["goals"]["home"],
-            "away_score": item["goals"]["away"],
-            "status": item["fixture"]["status"]["short"],
-            "minute": item["fixture"]["status"]["elapsed"] or 0,
-            "date": item["fixture"]["date"],
-            "stadium": item["fixture"].get("venue", {}).get("name", ""),
-            "city": item["fixture"].get("venue", {}).get("city", ""),
-            "stage": item["league"].get("round", "")
+            "id": fixture.get("id"),
+            "league": league.get("name", ""),
+            "league_id": league.get("id"),
+            "season": league.get("season", ""),
+            "country": league.get("country", ""),
+            "round": league.get("round", ""),
+            "stage": league.get("round", ""),
+            "home_team": teams.get("home", {}).get("name", ""),
+            "away_team": teams.get("away", {}).get("name", ""),
+            "home_logo": teams.get("home", {}).get("logo", ""),
+            "away_logo": teams.get("away", {}).get("logo", ""),
+            "home_winner": teams.get("home", {}).get("winner"),
+            "away_winner": teams.get("away", {}).get("winner"),
+            "home_score": goals.get("home"),
+            "away_score": goals.get("away"),
+            "status": status.get("short", ""),
+            "status_long": status.get("long", ""),
+            "minute": status.get("elapsed") or 0,
+            "date": fixture.get("date", ""),
+            "timestamp": fixture.get("timestamp", ""),
+            "timezone": fixture.get("timezone", ""),
+            "referee": fixture.get("referee", ""),
+            "stadium": venue.get("name", ""),
+            "city": venue.get("city", ""),
         }
 
     def get_available_dates(self, league_key=None):
@@ -70,21 +89,27 @@ class FootballAPIService:
             for i in range(0, 40)
         ]
 
+    def get_default_date(self, available_dates):
+        today = date.today().isoformat()
+
+        if today in available_dates:
+            return today
+
+        return available_dates[0] if available_dates else today
+
     def get_all_live_matches(self):
-        """OPTIMIZED: One API call for everything live"""
         data = self._get("fixtures", {"live": "all"})
         response = data.get("response", [])
 
         matches = [self._format_fixture(item) for item in response]
-
         supported_ids = [league["id"] for league in SUPPORTED_LEAGUES.values()]
 
         filtered = [
             match
             for match in matches
             if any(
-                item["fixture"]["id"] == match["id"]
-                and item["league"]["id"] in supported_ids
+                item.get("fixture", {}).get("id") == match["id"]
+                and item.get("league", {}).get("id") in supported_ids
                 for item in response
             )
         ]
@@ -92,7 +117,6 @@ class FootballAPIService:
         return sorted(filtered, key=lambda x: x.get("date", ""), reverse=True)
 
     def get_live_matches(self, league_key=None):
-        """OPTIMIZED: Use the all-live list and filter in memory"""
         all_live = self.get_all_live_matches()
 
         if not league_key:
@@ -126,13 +150,13 @@ class FootballAPIService:
         if not response:
             return []
 
-        table = response[0]["league"]["standings"][0]
+        table = response[0].get("league", {}).get("standings", [[]])[0]
 
         return [
             {
-                "position": team["rank"],
-                "team": team["team"]["name"],
-                "points": team["points"]
+                "position": team.get("rank"),
+                "team": team.get("team", {}).get("name", ""),
+                "points": team.get("points", 0)
             }
             for team in table
         ]
@@ -149,12 +173,10 @@ class FootballAPIService:
             league_key = "world-cup-2026"
 
         league_info = SUPPORTED_LEAGUES[league_key]
-        league_id = league_info["id"]
-        season = league_info["season"]
 
         data = self._get("fixtures", {
-            "league": league_id,
-            "season": season,
+            "league": league_info["id"],
+            "season": league_info["season"],
             "date": selected_date
         })
 
@@ -163,83 +185,7 @@ class FootballAPIService:
             for item in data.get("response", [])
         ]
 
-    def get_match_details(self, match_id):
-        """
-        Get full details for one match.
-        Used by route: /match/<match_id>
-        """
-        data = self._get("fixtures", {"id": match_id})
-        response = data.get("response", [])
-
-        if not response:
-            return None
-
-        item = response[0]
-        match = self._format_fixture(item)
-
-        match["events"] = []
-
-        for event in item.get("events", []) or []:
-            match["events"].append({
-                "minute": event.get("time", {}).get("elapsed"),
-                "extra_minute": event.get("time", {}).get("extra"),
-                "team": event.get("team", {}).get("name", ""),
-                "player": event.get("player", {}).get("name", ""),
-                "assist": event.get("assist", {}).get("name", ""),
-                "type": event.get("type", ""),
-                "detail": event.get("detail", ""),
-                "comments": event.get("comments", "")
-            })
-
-        match["lineups"] = {
-            "home": [],
-            "away": []
-        }
-
-        for lineup in item.get("lineups", []) or []:
-            team_name = lineup.get("team", {}).get("name", "")
-
-            players = [
-                player_item.get("player", {}).get("name", "")
-                for player_item in lineup.get("startXI", [])
-            ]
-
-            if team_name == match["home_team"]:
-                match["lineups"]["home"] = players
-
-            elif team_name == match["away_team"]:
-                match["lineups"]["away"] = players
-
-        match["statistics"] = {
-            "home": [],
-            "away": []
-        }
-
-        for stat in item.get("statistics", []) or []:
-            team_name = stat.get("team", {}).get("name", "")
-            stats = stat.get("statistics", [])
-
-            formatted_stats = [
-                {
-                    "type": s.get("type", ""),
-                    "value": s.get("value", "")
-                }
-                for s in stats
-            ]
-
-            if team_name == match["home_team"]:
-                match["statistics"]["home"] = formatted_stats
-
-            elif team_name == match["away_team"]:
-                match["statistics"]["away"] = formatted_stats
-
-        return match
-
     def get_upcoming_matches(self, league_key=None):
-        """
-        Get upcoming matches.
-        Used when there are no live matches.
-        """
         if not league_key:
             league_key = "world-cup-2026"
 
@@ -258,3 +204,151 @@ class FootballAPIService:
             self._format_fixture(item)
             for item in data.get("response", [])
         ]
+
+    def get_match_details(self, match_id):
+        fixture_data = self._get("fixtures", {"id": match_id})
+        fixture_response = fixture_data.get("response", [])
+
+        if not fixture_response:
+            return None
+
+        item = fixture_response[0]
+        match = self._format_fixture(item)
+
+        score = item.get("score", {})
+
+        match["score"] = {
+            "halftime": score.get("halftime", {}),
+            "fulltime": score.get("fulltime", {}),
+            "extratime": score.get("extratime", {}),
+            "penalty": score.get("penalty", {}),
+        }
+
+        events_data = self._get("fixtures/events", {"fixture": match_id})
+        lineups_data = self._get("fixtures/lineups", {"fixture": match_id})
+        statistics_data = self._get("fixtures/statistics", {"fixture": match_id})
+        players_data = self._get("fixtures/players", {"fixture": match_id})
+
+        match["events"] = self._format_events(events_data.get("response", []))
+        match["lineups"] = {"home": [], "away": []}
+        match["substitutes"] = {"home": [], "away": []}
+        match["formations"] = {"home": "", "away": ""}
+        match["coaches"] = {"home": "", "away": ""}
+        match["statistics"] = {"home": [], "away": []}
+        match["players"] = {"home": [], "away": []}
+
+        self._attach_lineups(match, lineups_data.get("response", []))
+        self._attach_statistics(match, statistics_data.get("response", []))
+        self._attach_players(match, players_data.get("response", []))
+
+        return match
+
+    def _format_events(self, events):
+        formatted_events = []
+
+        for event in events or []:
+            formatted_events.append({
+                "minute": event.get("time", {}).get("elapsed"),
+                "extra_minute": event.get("time", {}).get("extra"),
+                "team": event.get("team", {}).get("name", ""),
+                "team_logo": event.get("team", {}).get("logo", ""),
+                "player": event.get("player", {}).get("name", ""),
+                "assist": event.get("assist", {}).get("name", ""),
+                "type": event.get("type", ""),
+                "detail": event.get("detail", ""),
+                "comments": event.get("comments", "")
+            })
+
+        return formatted_events
+
+    def _format_lineup_player(self, player_item):
+        player = player_item.get("player", {})
+
+        return {
+            "id": player.get("id"),
+            "name": player.get("name", ""),
+            "number": player.get("number", ""),
+            "position": player.get("pos", ""),
+            "grid": player.get("grid", "")
+        }
+
+    def _attach_lineups(self, match, lineups):
+        for lineup in lineups or []:
+            team_name = lineup.get("team", {}).get("name", "")
+
+            starting_players = [
+                self._format_lineup_player(player_item)
+                for player_item in lineup.get("startXI", [])
+            ]
+
+            substitute_players = [
+                self._format_lineup_player(player_item)
+                for player_item in lineup.get("substitutes", [])
+            ]
+
+            if team_name == match["home_team"]:
+                side = "home"
+            elif team_name == match["away_team"]:
+                side = "away"
+            else:
+                continue
+
+            match["lineups"][side] = starting_players
+            match["substitutes"][side] = substitute_players
+            match["formations"][side] = lineup.get("formation", "")
+            match["coaches"][side] = lineup.get("coach", {}).get("name", "")
+
+    def _attach_statistics(self, match, statistics):
+        for stat in statistics or []:
+            team_name = stat.get("team", {}).get("name", "")
+
+            formatted_stats = [
+                {
+                    "type": item.get("type", ""),
+                    "value": item.get("value", "")
+                }
+                for item in stat.get("statistics", [])
+            ]
+
+            if team_name == match["home_team"]:
+                match["statistics"]["home"] = formatted_stats
+            elif team_name == match["away_team"]:
+                match["statistics"]["away"] = formatted_stats
+
+    def _format_player_stats(self, player_item):
+        player = player_item.get("player", {})
+        stats_list = player_item.get("statistics", [])
+        stats = stats_list[0] if stats_list else {}
+
+        return {
+            "id": player.get("id"),
+            "name": player.get("name", ""),
+            "photo": player.get("photo", ""),
+            "number": stats.get("games", {}).get("number", ""),
+            "position": stats.get("games", {}).get("position", ""),
+            "rating": stats.get("games", {}).get("rating", ""),
+            "minutes": stats.get("games", {}).get("minutes", 0),
+            "captain": stats.get("games", {}).get("captain", False),
+            "substitute": stats.get("games", {}).get("substitute", False),
+            "goals": stats.get("goals", {}).get("total", 0),
+            "assists": stats.get("goals", {}).get("assists", 0),
+            "saves": stats.get("goals", {}).get("saves", 0),
+            "fouls_drawn": stats.get("fouls", {}).get("drawn", 0),
+            "fouls_committed": stats.get("fouls", {}).get("committed", 0),
+            "yellow_cards": stats.get("cards", {}).get("yellow", 0),
+            "red_cards": stats.get("cards", {}).get("red", 0),
+        }
+
+    def _attach_players(self, match, players_data):
+        for team_players in players_data or []:
+            team_name = team_players.get("team", {}).get("name", "")
+
+            formatted_players = [
+                self._format_player_stats(player_item)
+                for player_item in team_players.get("players", [])
+            ]
+
+            if team_name == match["home_team"]:
+                match["players"]["home"] = formatted_players
+            elif team_name == match["away_team"]:
+                match["players"]["away"] = formatted_players
