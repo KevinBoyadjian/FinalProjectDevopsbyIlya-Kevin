@@ -160,6 +160,36 @@ class FootballAPIService:
             }
             for team in table
         ]
+    
+        # --- ADD THE TWO NEW FUNCTIONS HERE ---
+    def get_available_rounds(self, league_key="world-cup-2026"):
+        """Fetch all matchdays/rounds for a league (e.g. Group Stage - 1)"""
+        # Safety check: Default to World Cup if league_key is not provided or invalid
+        if not league_key or league_key not in SUPPORTED_LEAGUES:
+            league_key = "world-cup-2026"
+
+        league_id = SUPPORTED_LEAGUES[league_key]["id"]
+        season = SUPPORTED_LEAGUES[league_key]["season"]
+        
+        data = self._get("fixtures/rounds", {"league": league_id, "season": season})
+        return data.get("response", [])
+
+    def get_matches_by_round(self, league_key, round_name):
+        """Fetch all matches for a specific Game Week / Round"""
+        # Safety check: Default to World Cup if league_key is not provided or invalid
+        if not league_key or league_key not in SUPPORTED_LEAGUES:
+            league_key = "world-cup-2026"
+        
+        league_id = SUPPORTED_LEAGUES[league_key]["id"]
+        season = SUPPORTED_LEAGUES[league_key]["season"]
+
+        data = self._get("fixtures", {
+            "league": league_id,
+            "season": season,
+            "round": round_name
+        })
+        matches = [self._format_fixture(item) for item in data.get("response", [])]
+        return sorted(matches, key=lambda x: x['date']) # Sort by date for chronological order
 
     def get_matches_by_date(self, league_key=None, selected_date=None):
         if not selected_date:
