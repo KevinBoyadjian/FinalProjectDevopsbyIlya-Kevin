@@ -51,26 +51,22 @@ class FootballAPIService:
         }
 
     def get_available_dates(self, league_key=None):
-        # Your excellent tournament calendar logic
         start_date = date(2026, 6, 11)
         return [(start_date + timedelta(days=i)).isoformat() for i in range(0, 40)]
 
     def get_all_live_matches(self):
-        """OPTIMIZED: One API call for everything live"""
         data = self._get("fixtures", {"live": "all"})
-        matches = [self._format_fixture(item) for item in data.get("response", [])]
+        raw_response = data.get("response", [])
+        matches = [self._format_fixture(item) for item in raw_response]
         
-        # Only return matches belonging to our supported leagues
         supported_ids = [l["id"] for l in SUPPORTED_LEAGUES.values()]
-        filtered = [m for m in matches if any(match_item for match_item in data.get("response", []) if match_item['fixture']['id'] == m['id'] and match_item['league']['id'] in supported_ids)]
+        filtered = [m for m in matches if any(r for r in raw_response if r['fixture']['id'] == m['id'] and r['league']['id'] in supported_ids)]
         
         return sorted(filtered, key=lambda x: x.get("date", ""), reverse=True)
 
     def get_live_matches(self, league_key=None):
-        """OPTIMIZED: Use the all-live list and filter in memory"""
         all_live = self.get_all_live_matches()
         if not league_key: return all_live
-        
         target_league_name = SUPPORTED_LEAGUES[league_key]["name"]
         return [m for m in all_live if m["league"] == target_league_name]
 
@@ -83,33 +79,61 @@ class FootballAPIService:
         response = data.get("response", [])
         if not response: return []
         
-        table = response[0]["league"]["standings"][0]
-        return [{"position": t["rank"], "team": t["team"]["name"], "points": t["points"]} for t in table]
+        # Robust check for standings structure (Some leagues have nested groups)
+        try:
+            standings_data = response[0]["league"]["standings"]
+            # If it's a list of lists (multiple groups), take the first one
+            table = standings_data[0] if isinstance(standings_data[0], list) else standings_data
+            
+            return [
+                {
+                    "position": t["rank"], 
+                    "team": t["team"]["name"], 
+                    "points": t["points"]
+                } for t in table
+            ]
+        except (KeyError, IndexError):
+            return []
+
+    def get_match_details(self, match_id):
+        data = self._get("fixtures", {"id": match_id})
+        response = data.get("response", [])
+        if not response: return None
+        
+        item = response[0]
+        match = self._format_fixture(item)
+
+        # Fetch Events
+        events_data = self._get("fixtures/events", {"fixture": match_id})
+        match["events"] = [
+            {
+                "minute": e.get("time", {}).get("elapsed"),
+                "team": e.get("team", {}).get("name"),
+                "type": e.get("type"),
+                "player": e.get("player", {}).get("name")
+            } for e in events_data.get("response", [])
+        ]
+
+        # Fetch Lineups
+        lineups_data = self._get("fixtures/lineups", {"fixture": match_id})
+        match["lineups"] = {"home": [], "away": []}
+        for team_lineup in lineups_data.get("response", []):
+            players = [p["player"]["name"] for p in team_lineup.get("startXI", [])]
+            if team_lineup["team"]["name"] == match["home_team"]:
+                match["lineups"]["home"] = players
+            else:
+                match["lineups"]["away"] = players
+        
+        return match
 
     def get_matches_by_date(self, league_key=None, selected_date=None):
-        # 1. Safety: If no date, use today
-        if not selected_date:
-            selected_date = date.today().isoformat()
-        
-        # 2. FIX THE 500 ERROR: If league_key is missing (None), default to World Cup
-        if not league_key:
-            league_key = "world-cup-2026"
-
-        # 3. Final check to ensure the league exists in our list
-        if league_key not in SUPPORTED_LEAGUES:
-            print(f"DEBUG: League {league_key} not found, defaulting to World Cup")
-            league_key = "world-cup-2026"
+        if not selected_date: selected_date = date.today().isoformat()
+        if not league_key: league_key = "world-cup-2026"
 
         league_info = SUPPORTED_LEAGUES[league_key]
-        league_id = league_info["id"]
-        season = league_info["season"]
-
-        # 4. Fetch from API
         data = self._get("fixtures", {
-            "league": league_id, 
-            "season": season, 
+            "league": league_info["id"], 
+            "season": league_info["season"], 
             "date": selected_date
         })
-        
         return [self._format_fixture(item) for item in data.get("response", [])]
-
