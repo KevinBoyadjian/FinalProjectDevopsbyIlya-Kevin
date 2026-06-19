@@ -1,90 +1,154 @@
-import time
-from flask import Flask, jsonify, render_template, request, make_response
+from flask import Flask, render_template, request, jsonify
+
 from config import Config
-from services.football_api import FootballAPIService
+from services.football_api import FootballAPIService, SUPPORTED_LEAGUES
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
 football_service = FootballAPIService(app.config)
 
-# --- GLOBAL CACHE VARIABLES ---
-cache_data = None
-last_fetch_time = 0
-CACHE_DURATION = 60 # 60 seconds
-
-def add_cache_headers(response, max_age):
-    response.headers["Cache-Control"] = f"public, max-age={max_age}"
-    return response
 
 @app.route("/")
 def index():
-    global cache_data, last_fetch_time
-    
-    # 1. Get Parameters
-    league = request.args.get("league", "world-cup-2026")
+    selected_league = request.args.get("league", "world-cup-2026")
     selected_date = request.args.get("date")
-    available_dates = football_service.get_available_dates(league)
-    current_time = time.time()
 
-    # 2. CACHE LOGIC: Only apply to the default Live World Cup view
-    if not selected_date and league == "world-cup-2026":
-        if cache_data and (current_time - last_fetch_time < CACHE_DURATION):
-            print("DEBUG: Serving Homepage from Cache")
-            resp = make_response(render_template(
-                "index.html",
-                matches=cache_data["matches"],
-                mode="live",
-                selected_league=league,
-                selected_date=None,
-                available_dates=available_dates,
-            ))
-            return add_cache_headers(resp, 60)
+    if selected_league not in SUPPORTED_LEAGUES:
+        selected_league = "world-cup-2026"
 
-    # 3. DATA FETCHING (If not cached or if viewing a specific date)
-    if selected_date:
-        # This calls the fixed function in football_api.py (No 500 error)
-        matches = football_service.get_matches_by_date(league, selected_date)
-        mode = "date"
+    available_dates = []
+    mode = "schedule"
+
+    if selected_league == "world-cup-2026":
+        available_dates = football_service.get_available_dates(selected_league)
+
+        if not selected_date:
+            if hasattr(football_service, "get_default_date"):
+                selected_date = football_service.get_default_date(available_dates)
+            elif available_dates:
+                selected_date = available_dates[0]
+
+        matches = football_service.get_matches_by_date(
+            selected_league,
+            selected_date
+        )
+
     else:
-        matches = football_service.get_all_live_matches()
+        matches = football_service.get_live_matches(selected_league)
         mode = "live"
-        # Update the cache for the next user
-        if league == "world-cup-2026":
-            cache_data = {"matches": matches, "total": len(matches)}
-            last_fetch_time = current_time
 
-    resp = make_response(render_template(
+        if not matches:
+            matches = football_service.get_upcoming_matches(selected_league)
+            mode = "upcoming"
+
+    return render_template(
         "index.html",
         matches=matches,
-        mode=mode,
-        selected_league=league,
+        selected_league=selected_league,
         selected_date=selected_date,
         available_dates=available_dates,
-    ))
-    return add_cache_headers(resp, 30)
+        mode=mode,
+        leagues=SUPPORTED_LEAGUES
+    )
+
+
+@app.route("/match/<match_id>")
+def match_details(match_id):
+    selected_league = request.args.get("league", "world-cup-2026")
+    selected_date = request.args.get("date")
+
+    match = football_service.get_match_details(match_id)
+
+    if match is None:
+        return render_template(
+            "match.html",
+            match={
+                "home_team": "Match",
+                "away_team": "not found",
+                "home_score": None,
+                "away_score": None,
+                "status": "N/A",
+                "status_long": "Not available",
+                "minute": 0,
+                "date": "",
+                "league": "",
+                "stage": "",
+                "referee": "",
+                "stadium": "",
+                "city": "",
+                "home_logo": "",
+                "away_logo": "",
+                "score": {
+                    "halftime": {"home": None, "away": None},
+                    "fulltime": {"home": None, "away": None},
+                    "extratime": {"home": None, "away": None},
+                    "penalty": {"home": None, "away": None},
+                },
+                "events": [],
+                "statistics": {"home": [], "away": []},
+                "lineups": {"home": [], "away": []},
+                "substitutes": {"home": [], "away": []},
+                "formations": {"home": "", "away": ""},
+                "coaches": {"home": "", "away": ""},
+                "players": {"home": [], "away": []},
+            },
+            selected_league=selected_league,
+            selected_date=selected_date
+        ), 404
+
+    return render_template(
+        "match.html",
+        match=match,
+        selected_league=selected_league,
+        selected_date=selected_date
+    )
+
 
 @app.route("/api/live/all")
-def api_live():
-    global cache_data, last_fetch_time
-    current_time = time.time()
+def api_live_all():
+    selected_league = request.args.get("league")
 
-    # Serve AJAX requests from the same cache
-    if cache_data and (current_time - last_fetch_time < CACHE_DURATION):
-        return jsonify({"mode": "all_live", "matches": cache_data["matches"], "cached": True})
+    if selected_league and selected_league in SUPPORTED_LEAGUES:
+        matches = football_service.get_live_matches(selected_league)
 
-    # If cache expired, fetch fresh
-    all_live_matches = football_service.get_all_live_matches()
-    cache_data = {"matches": all_live_matches, "total": len(all_live_matches)}
-    last_fetch_time = current_time
-    
-    return jsonify({"mode": "all_live", "matches": all_live_matches, "cached": False})
+        if not matches:
+            matches = football_service.get_upcoming_matches(selected_league)
 
-@app.route("/api/standings/<league_key>")
-def api_standings(league_key):
-    # Standings don't change often, so we use a long 24-hour cache
-    standings = football_service.get_standings(league_key)
-    resp = make_response(jsonify(standings))
-    return add_cache_headers(resp, 86400)
+    else:
+        matches = football_service.get_all_live_matches()
+
+    return jsonify({
+        "matches": matches
+    })
+
+
+@app.route("/api/matches")
+def api_matches():
+    selected_league = request.args.get("league", "world-cup-2026")
+    selected_date = request.args.get("date")
+
+    matches = football_service.get_matches_by_date(
+        selected_league,
+        selected_date
+    )
+
+    return jsonify({
+        "matches": matches
+    })
+
+
+@app.route("/health")
+def health():
+    return jsonify({
+        "status": "ok"
+    })
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=False
+    )
