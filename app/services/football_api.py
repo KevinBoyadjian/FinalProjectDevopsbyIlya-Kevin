@@ -118,13 +118,7 @@ class FootballAPIService:
 
     def get_live_matches(self, league_key=None):
         all_live = self.get_all_live_matches()
-
-        if not league_key:
-            return all_live
-
-        if league_key not in SUPPORTED_LEAGUES:
-            return []
-
+        if not league_key: return all_live
         target_league_name = SUPPORTED_LEAGUES[league_key]["name"]
 
         return [
